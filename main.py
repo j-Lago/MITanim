@@ -1,9 +1,16 @@
 import tkinter as tk
 from math import sin, cos, pi, atan2, sqrt
 from time import time
+
+import matplotlib.pyplot as plt
+
 from tools import denorm_base, rotate, translate, rotate_flat_list, norm_points, denorm_points
 from Vec import gVec, NormCanvas
 import numpy as np
+
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 
 
 WIDTH = 700
@@ -17,12 +24,12 @@ fonts = {'default': ('Cambria', 12),
 colors = {'bg': '#ffffff',
           'airgap': '#ffffff',
           'outline': '#666666',
-          'a': '#aa4422',
-          'b': '#2244aa',
-          'c': '#44aa22',
-          'x': '#cc6633',
-          'y': '#3366cc',
-          'z': '#33cc66',
+          'a': '#2a7db7',
+          'b': '#33a333',
+          'c': '#ff8419',
+          'x': '#5d86a6',
+          'y': '#5ba680',
+          'z': '#f08e6b',
           'core': '#cccccc',
           'shaft': '#999999'
           }
@@ -141,6 +148,8 @@ def draw_3phase_induction_rotor(canvas: NormCanvas,
     OUTER_RADIUS = .74 * scale
     ESP_RADIUS = .067 * scale
     ESP_DISTANCE_R = 0.83 * scale
+    SHAFT_RADIUS = 0.15 * scale
+    KEYWAY_SIZE = (.1 * scale, .1 * scale)
 
     pos_r = esp_positions(ESP_DISTANCE_R, orientation)
     core = canvas.draw_circle( OUTER_RADIUS, width=width, fill=colors['core'], outline=colors['outline'])
@@ -151,9 +160,10 @@ def draw_3phase_induction_rotor(canvas: NormCanvas,
               canvas.draw_circle(ESP_RADIUS, width=0, fill=colors['z'], center=pos_r[4]),
               canvas.draw_circle(ESP_RADIUS, width=0, fill=colors['z'], center=pos_r[5])]
 
-    return ( core,
-             *esps_r
-    ), esps_r
+    shaft = canvas.draw_circle(SHAFT_RADIUS, width=1, fill=colors['shaft'], outline=colors['core'])
+    keyway = draw_keyway(canvas, KEYWAY_SIZE, SHAFT_RADIUS, orientation=orientation, fill=colors['core']),
+
+    return ( core, *esps_r, shaft, keyway), esps_r, keyway
 
 
 class Anim():
@@ -202,10 +212,9 @@ class Anim():
 
 
         self.stator = draw_3phase_stator(self.ncanvas)
-        self.rotor, self.esps_r = draw_3phase_induction_rotor(self.ncanvas)
+        self.rotor, self.esps_r, self.keyway = draw_3phase_induction_rotor(self.ncanvas)
 
-        self.ncanvas.draw_circle(self.SHAFT_RADIUS, width=1, fill=colors['shaft'], outline=colors['core'])
-        self.keyway = draw_keyway(self.ncanvas, (.1, .1), self.SHAFT_RADIUS, orientation=0, fill=colors['core']),
+
         # widgets['canvas']
 
         dash = (10, 5)
@@ -318,6 +327,18 @@ class Anim():
 if __name__ == '__main__':
     window = tk.Tk()
     window.title("Motor de Indução Trifásico")
+
+    fig, axs = plt.subplots(2,1, figsize=(8, 4), dpi=100)
+    t = np.arange(0.0, 0.05, .0001)
+    w = 2*pi*60
+    d = 2*pi/3
+    y = 0.8
+    axs[0].plot(t, np.sin(w * t), t, np.sin(w * t - d), t, np.sin(w * t + d))
+    axs[1].plot(0,0,0,0,0,0,t, np.sin(w * t + y), t, np.sin(w * t - d + y), t, np.sin(w * t + d + y))
+
+    plt_canvas = FigureCanvasTkAgg(fig, master=window)  # A tk.DrawingArea.
+    plt_canvas.draw()
+    plt_canvas.get_tk_widget().pack(side=tk.RIGHT, fill=tk.BOTH, expand=1)
 
     widgets = {'canvas': tk.Canvas(window, bg=colors['bg'], height=HEIGHT, width=WIDTH),
                'fps': tk.Label(window, text="fps:", font=fonts['fps'], fg='#bb5533'),
