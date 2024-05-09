@@ -39,6 +39,22 @@ class Primitive:
         return merged
 
     @property
+    def arrow(self) -> str:
+        return self._canvas.itemcget(self._handle, 'arrow')
+
+    @arrow.setter
+    def arrow(self, arrow):
+        self._canvas.itemconfig(self._handle, arrow=arrow)
+
+    @property
+    def arrowshape(self) -> str:
+        return self._canvas.itemcget(self._handle, 'arrowshape')
+
+    @arrowshape.setter
+    def arrowshape(self, arrowshape):
+        self._canvas.itemconfig(self._handle, arrowshape=arrowshape)
+
+    @property
     def fill(self) -> str:
         return self._canvas.itemcget(self._handle, 'fill')
 
@@ -119,33 +135,20 @@ class Primitive:
                 raise ValueError(f"'primitive_type' ({self.shape}) inválido")
         self.draw()
 
-    def draw(self, coords: Coords | None = None, **kwargs):
-        if coords:
-            self.coords = coords
+    def draw(self,
+             reset_transforms_to_original_after_draw: bool = True,
+             consolidate_transforms_to_original: bool = False,
+             **kwargs):
 
         self._canvas.coords(self._handle, self.denorm_coords())
         self._canvas.itemconfig(self._handle, **kwargs)
-        # if self._handle:
-        #     self._canvas.coords(self._handle, self.denorm_coords())
-        # else:
-        #     raise ValueError
-            # match self.shape:
-            #     case 'line':
-            #         self._handle = self._canvas.create_line(self.denorm_coords(), fill=self._stroke, width=self._width, state=self.state)
-            #     case 'polygon':
-            #         self._handle = self._canvas.create_polygon(self.denorm_coords(), outline=self._stroke,
-            #                                                    fill=self._fill, width=self._width, state=self.state)
-            #     case 'rectangle':
-            #         raise ValueError(f"'primitive_type' ({self.shape}) inválido")
-            #     case 'oval':
-            #         raise ValueError(f"'primitive_type' ({self.shape}) inválido")
-            #     case 'circle':
-            #         self._handle = self._canvas.create_oval(self._denorm_coords_circle_to_oval(), outline=self._stroke,
-            #                                                 fill=self._fill, width=self._width, state=self.state)
-            #     case 'arc':
-            #         raise ValueError(f"'primitive_type' ({self.shape}) inválido")
-            #     case _:
-            #         raise ValueError(f"'primitive_type' ({self.shape}) inválido")
+
+        if consolidate_transforms_to_original:
+            self.original_coords = self.coords
+        else:
+            if reset_transforms_to_original_after_draw:
+                self.coords = self.original_coords
+
 
 
     def denorm_coords(self) -> Coords:

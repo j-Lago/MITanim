@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from NormCanvas import NormCanvas
 from time import time
+from primitive import Primitive
 
 
 class Animation(ABC):
@@ -16,6 +17,9 @@ class Animation(ABC):
     # @property
     # def t(self) -> float:
     #     return time() - self._t_init
+
+    def create_primitive(self, *args, **kwargs) -> Primitive:
+        return Primitive(self.canvas,  *args, **kwargs)
 
     def _start_frame_time_counter(self) -> (float, float):
         # t = self.t
