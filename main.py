@@ -3,7 +3,7 @@ from math import sin, cos, pi, atan2, sqrt
 from NormCanvas import NormCanvas
 from primitive import Primitive
 from transforms import translate, rotate, scale, rgb_to_hex
-from time import time
+import time
 from assets import mosca, primitives, cl
 from Animation import Animation
 from collections import deque
@@ -37,7 +37,8 @@ class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas):
         super().__init__(canvas)
 
-        self.dt_filter_buffer = deque(maxlen=10)
+        self.dt_filter_buffer = deque(maxlen=100)
+        self.dc_filter_buffer = deque(maxlen=100)
 
         self.stator_core = [
             Primitive(self.canvas, **primitives['stator_outer']),
