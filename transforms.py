@@ -1,5 +1,6 @@
 from math import sin, cos, pi, atan2, sqrt
-
+import typing
+from copy import copy
 
 type Numeric = float or int
 type Coords = list[Numeric, ...] or tuple[Numeric, ...]
@@ -15,14 +16,27 @@ def translate(coords: Coords, offset: Point) -> Coords:
         return input_type(v + offset[i % 2] for i, v in enumerate(coords))
 
 
-def scale(coords: Coords, factor: Numeric, center: Point = (0, 0)) -> Coords:
+def scale(coords: Coords, factor: Numeric | Point, center: Point = (0, 0)) -> Coords:
     input_type = type(coords)
 
     if len(coords) == 3:
         return input_type(((coords[0]-center[0])*factor+center[0], (coords[1]-center[1])*factor+center[1], coords[2]*factor))
     else:
-        return input_type(factor * (v-center[i_xy := i % 2]) + center[i_xy] for i, v in enumerate(coords))
+        if isinstance(factor, float | int):
+            print(factor)
+            factor = (factor, factor)
+        return input_type(factor[i_xy := i % 2] * (v-center[i % 2]) + center[i_xy] for i, v in enumerate(coords))
 
+
+def reverse(coords: Coords) -> Coords:
+    input_type = type(coords)
+
+    original = copy(coords)
+    L = len(original)//2
+    pairs = (zip(coords[::2], coords[1::2]))  # (x0, y0, x1, y1, ...) -> ((x0, y0), (x1, y1), ...)
+    pairs = ( (original[-i*2], original[-i*2-1])  for i in range(L) )
+    coords = (v for pt in pairs for v in pt)  # ((x0, y0), (x1, y1), ...) -> (x0, y0, x1, y1, ...)
+    return input_type(coords)
 
 def rotate(coords: Coords, angle: Numeric, center: Point = (0, 0)) -> Coords:
     input_type = type(coords)

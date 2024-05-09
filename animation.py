@@ -1,15 +1,17 @@
-import abc
+from abc import ABC, abstractmethod
 from NormCanvas import NormCanvas
 from time import time
 
 
-class Animation(abc.ABC):
+class Animation(ABC):
     def __init__(self, canvas: NormCanvas, frame_delay: int = 10):
         self._t_init = time()
         self._t_start = 0.0
 
         self.canvas = canvas
         self.frame_delay = frame_delay
+
+        self.binds()
 
     # @property
     # def t(self) -> float:
@@ -29,6 +31,12 @@ class Animation(abc.ABC):
 
         self.canvas.window.after(self.frame_delay, self.loop)
 
-    @abc.abstractmethod
-    def loop_update(self, t: float, dt: float, duty_cycle: float):
+    @abstractmethod
+    def binds(self, t: float, dt: float):
         pass
+        # window.bind('<Right>', lambda event: call_function_1())
+        # window.bind('<Left>',  lambda event: call_function_2())
+
+
+
+
