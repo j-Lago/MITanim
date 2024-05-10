@@ -36,7 +36,7 @@ class Animation(ABC):
         self.canvas.window.after(self.frame_delay, self.loop)
 
     @abstractmethod
-    def binds(self, t: float, dt: float):
+    def binds(self):
         pass
         # window.bind('<Right>', lambda event: call_function_1())
         # window.bind('<Left>',  lambda event: call_function_2())

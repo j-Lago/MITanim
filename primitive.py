@@ -135,6 +135,9 @@ class Primitive:
                 raise ValueError(f"'primitive_type' ({self.shape}) inválido")
         self.draw()
 
+    def delete(self):
+        self._canvas.delete(self._handle)
+
     def draw(self,
              reset_transforms_to_original_after_draw: bool = True,
              consolidate_transforms_to_original: bool = False,
