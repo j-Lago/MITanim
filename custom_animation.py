@@ -27,6 +27,8 @@ class CustomAnim(Animation):
         self.fg = 60
         self.time_factor = 140
 
+        self.dynamic_colors = False
+
         self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
         self.display_mu.current_key = 'rpm'
 
@@ -68,8 +70,12 @@ class CustomAnim(Animation):
 
         widgets['canvas_fig0'].draw()
 
-        self.run = True
+        self.run = False
 
+        self.ns_alt = 3   # todo: so funciona para 3 e 1
+        self.nr_alt = 3   # todo: so funciona para 3 e 1
+        self.ns = 1
+        self.nr = 1
 
         self.prims = {'stator': {},
                       'rotor': {},
@@ -78,23 +84,42 @@ class CustomAnim(Animation):
                       }
 
 
+
         self.prims['stator']['core'] = [
             self.create_primitive(**assets['mount']),
             self.create_primitive(**assets['mount']).scale((-1.0,1.0)),
             self.create_primitive(**assets['stator_outer']),
             self.create_primitive(**assets['stator_inner']),
-            *(self.create_primitive(**assets['stator_cutout']).rotate(2 * pi / 6 * i) for i in range(6)),
-            *(self.create_primitive(**assets['stator_cutout_outline']).rotate(2 * pi / 6 * i) for i in range(6)),
         ]
+
+        self.prims['stator']['cutout'] = [
+            *(self.create_primitive(**assets['stator_cutout']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3)
+              for i in range(self.ns_alt * 6)),
+        ]
+
+        self.prims['stator']['cutout_outline'] = [
+            *(self.create_primitive(**assets['stator_cutout_outline']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3)
+              for i in range(self.ns_alt * 6)),
+        ]
+
 
         self.prims['rotor']['core'] = [
             self.create_primitive(**assets['rotor_outer']),
-            *(self.create_primitive(**assets['rotor_cutout']).rotate(2 * pi / 6 * i) for i in range(6)),
-            *(self.create_primitive(**assets['rotor_cutout_outline']).rotate(2 * pi / 6 * i) for i in range(6)),
-            self.create_primitive(**assets['shaft']),
-            self.create_primitive(**assets['keyway']),
-            self.create_primitive(**assets['keyway_outline']),
+            ]
+
+        self.prims['rotor']['cutout'] = [
+            *(self.create_primitive(**assets['rotor_cutout']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3)
+              for i in range(self.ns_alt * 6)),
         ]
+
+        self.prims['rotor']['cutout_outline'] = [
+            *(self.create_primitive(**assets['rotor_cutout_outline']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3)
+              for i in range(self.nr_alt * 6)),
+        ]
+
+        self.prims['rotor']['core'].append(self.create_primitive(**assets['shaft']))
+        self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway']))
+        self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway_outline']))
 
         self.prims['stator']['axis'] = [
             *(self.create_primitive(**assets['stator_axis']).rotate(2 * pi / 3 * i) for i in range(3)),
@@ -208,32 +233,30 @@ class CustomAnim(Animation):
         for p in self.prims['extra_s']['flux_s']: p.stroke = cl['flux_s']
 
         self.prims['stator']['esp'] = [
-            *(self.create_primitive(**assets['stator_esp']).rotate(-2 * pi / 6 * i) for i in range(6)),
+            *(self.create_primitive(**assets['stator_esp']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3) for i in range(self.ns_alt * 6)),
         ]
         for i, p in enumerate(self.prims['stator']['esp']):
-            p.fill = cl[('a', 'b', 'c')[i % 3]]
+            p.fill = cl[('a', 'b', 'c')[i // self.ns_alt % 3]]
 
         self.prims['rotor']['esp'] = [
-            *(self.create_primitive(**assets['rotor_esp']).rotate(-2 * pi / 6 * i) for i in range(6)),
+            *(self.create_primitive(**assets['rotor_esp']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3) for i in range(self.nr_alt * 6)),
         ]
         for i, p in enumerate(self.prims['rotor']['esp']):
-            p.fill = cl[('x', 'y', 'z')[i % 3]]
+            p.fill = cl[('x', 'y', 'z')[i // self.nr_alt % 3]]
 
         self.prims['extra_r']['esp_front'] = [
-            *(self.create_primitive(**assets['rotor_esp_front']).rotate(2 * pi / 3 * i) for i in range(3)),
+            *(self.create_primitive(**assets['rotor_esp_front']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3) for i in range(3 * self.nr_alt)),
         ]
         for i, p in enumerate(self.prims['extra_r']['esp_front']):
-            p.fill = cl[('x', 'y', 'z')[i % 3]]
+            p.fill = cl[('x', 'y', 'z')[i // self.nr_alt % 3]]
 
         self.prims['extra_s']['esp_front'] = [
-            *(self.create_primitive(**assets['stator_esp_front']).rotate(2 * pi / 3 * i) for i in range(3)),
+            *(self.create_primitive(**assets['stator_esp_front']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3) for i in range(3 * self.ns_alt)),
         ]
         for i, p in enumerate(self.prims['extra_s']['esp_front']):
-            p.fill = cl[('a', 'b', 'c')[i % 3]]
+            p.fill = cl[('a', 'b', 'c')[i // self.ns_alt % 3]]
 
-        # self.prims['rotor']['core'].append(self.create_primitive(**assets['shaft']))
-        # self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway']))
-        # self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway_outline']))
+        self.update_esp_and_cutout_visibility()
 
         self.draw_all(consolidate_transforms_to_original=True)
 
@@ -276,8 +299,8 @@ class CustomAnim(Animation):
         colors_s =[]
         for k, v in enumerate(currents_s):
             rgb = hex_to_rgb((cl['a'], cl['b'], cl['c'])[k % 3])
-            # f = fabs(currents_s[k % 3])
-            f = abs(currents_s[k % 3])
+
+            f = abs(currents_s[k % 3]) if self.dynamic_colors else 1.0
             colors_s.append(rgb_to_hex(scale_hsl(rgb, hue=1, sat=(1-f)*0.05+0.95, lum=sqrt(f) * 1.2)))
 
         # stator
@@ -286,10 +309,12 @@ class CustomAnim(Animation):
                 for prims in self.prims[part][group]:
                     prims.rotate(self.ths)
 
-        for k, prims in enumerate(self.prims['stator']['esp']):
-            prims.fill = colors_s[k%3]
-        for k, prims in enumerate(self.prims['extra_s']['esp_front']):
-            prims.fill = colors_s[k % 3]
+        # TODO: restaurar
+        # for k, prims in enumerate(self.prims['stator']['esp']):
+        #         prims.fill = colors_s[k//self.ns%3]
+        #
+        # for k, prims in enumerate(self.prims['extra_s']['esp_front']):
+        #     prims.fill = colors_s[k//self.ns % 3]
 
         # rotor
         for part in ['rotor', 'extra_r']:
@@ -303,7 +328,6 @@ class CustomAnim(Animation):
         max_width = 6
         for phase_id in range(3):
             if self.prims['extra_s'][groups[phase_id]][0].visible:
-                th = self.the + 2 * pi / 3
                 for prims in *self.prims['extra_s'][groups[phase_id]],:
                     s = currents_s[phase_id]
                     prims.arrowshape = (tip[0] * s, tip[1] * s, tip[2] * fabs(s))
@@ -350,6 +374,39 @@ class CustomAnim(Animation):
         self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.0f} x")
         self.widgets['frame_delay'].config(text=f"   frame delay: {self.frame_delay:>5} ms")
 
+    def update_esp_and_cutout_visibility(self):
+        parts = ['stator', 'rotor']
+        groups = ['esp', 'cutout', 'cutout_outline']
+        n = {'stator': self.ns, 'rotor': self.nr, 'extra_s': self.ns, 'extra_r': self.nr}
+        if self.ns == 1:
+            for part in parts:
+                for group in groups:
+                    for k, prims in enumerate(self.prims[part][group]):
+                        if ((k + 1) // n[part] % 3) != 2:
+                            self.prims[part][group][k].visible = False
+        else:
+            for part in parts:
+                for group in groups:
+                    for k, prims in enumerate(self.prims[part][group]):
+                        self.prims[part][group][k].visible = True
+
+        parts = ['extra_s', 'extra_r']
+        groups = ['esp_front']
+        if self.ns == 1:
+            for part in parts:
+                for group in groups:
+                    for k, prims in enumerate(self.prims[part][group]):
+                        if ((k + 1) // n[part] % 3) != 2:
+                            self.prims[part][group][k].visible = False
+        else:
+            for part in parts:
+                for group in groups:
+                    visible = False
+                    for k, prims in enumerate(self.prims[part][group]):
+                        visible |= self.prims[part][group][k].visible
+                    for k, prims in enumerate(self.prims[part][group]):
+                        self.prims[part][group][k].visible = visible
+
     def binds(self) -> None:
 
         def show_binds():
@@ -381,27 +438,6 @@ class CustomAnim(Animation):
             self.update_info()
 
 
-        def toggle_visibility(parts: Literal['stator', 'rotor'], groups: str | None = None):
-
-            first_visibility = None
-            if isinstance(parts, str):
-                parts = [parts]
-            for part in parts:
-                if groups:
-                    if isinstance(groups, str):
-                        groups = [groups]
-                    for group in groups:
-                        for p in self.prims[part][group]:
-                            if first_visibility == None:
-                                first_visibility = not p.visible
-                            p.visible = first_visibility
-                else:
-                    for group in self.prims[part]:
-                        for p in self.prims[part][group]:
-                            if first_visibility == None:
-                                first_visibility = not p.visible
-                            p.visible = first_visibility
-
         def reset_time(reset_and_stop=False):
             self._t_init = time.time()
             self._t_start = 0.0
@@ -417,8 +453,81 @@ class CustomAnim(Animation):
             next(self.display_mu)
             self.update_info()
 
+        def toggle_visibility(parts: Literal['stator', 'rotor'], groups: str | None = None):
+
+            # todo: naão funciona 'e'->'n'->'e'
+            # if parts in ['extra_s', 'extra_r']:
+            #     if groups in ['esp_front']:
+            #         update_esp_and_cutout_visibility()
+            #         return
+
+
+
+
+            if isinstance(parts, str):
+                parts = [parts]
+            if isinstance(groups, str):
+                groups = [groups]
+
+            # print(parts,groups )
+
+            first_visibility = False
+            for part in parts:
+                if groups:
+                    for group in groups:
+                        for p in self.prims[part][group]:
+                            if p.visible:
+                                first_visibility = True or first_visibility
+                else:
+                    for group in self.prims[part]:
+                        for p in self.prims[part][group]:
+                            if p.visible:
+                                first_visibility = True or first_visibility
+
+                # print(first_visibility)
+
+            # first_visibility = None
+            # if isinstance(parts, str):
+            #     parts = [parts]
+            for part in parts:
+                if groups:
+                    # if isinstance(groups, str):
+                        # groups = [groups]
+                    for group in groups:
+                        for p in self.prims[part][group]:
+                            # if first_visibility == None:
+                                # first_visibility = not p.visible
+                            p.visible = not first_visibility
+                else:
+                    for group in self.prims[part]:
+                        for p in self.prims[part][group]:
+                            # if first_visibility == None:
+                            #     first_visibility = not p.visible
+                            p.visible = not first_visibility
+
+            self.update_esp_and_cutout_visibility()
+
+
+
+
+        def change_nesp():
+            self.ns = self.ns_alt if self.ns == 1 else 1
+            self.nr = self.nr_alt if self.nr == 1 else 1
+            # print(self.ns, self.nr, )
+            self.update_esp_and_cutout_visibility()
+
+
+
+                # for k, p in enumerate(self.prims['extra_s']['esp_front']):
+                #     if ((k + 1) // self.ns % 3) != 2:
+                #         p.visible = False
+                #         prims.fill = colors_s[k // self.ns % 3]
+
+
         dw_inc = 1
         f_max = 70
+        self.canvas.window.bind('n', lambda event: change_nesp())
+
         self.canvas.window.bind('+', lambda event: inc_value('ws', dw_inc, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('ws', -dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Right>', lambda event: inc_value('wr', dw_inc, -f_max, f_max))
