@@ -8,6 +8,7 @@ from tools import denorm_base, rotate, translate, rotate_flat_list, norm_points,
 from Vec import gVec, NormCanvas
 import numpy as np
 
+
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure

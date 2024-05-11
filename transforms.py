@@ -1,6 +1,8 @@
 from math import sin, cos, pi, atan2, sqrt
 import typing
 from copy import copy
+from colorsys import hls_to_rgb, rgb_to_hls
+
 
 type Numeric = float or int
 type Coords = list[Numeric, ...] or tuple[Numeric, ...]
@@ -82,14 +84,44 @@ def clip(v: Numeric, v_min: Numeric, v_max) -> Numeric:
     return max(min(v, v_max), v_min)
 
 
-def rgb_to_hex(r, g, b) -> str:
-    if isinstance(r, float) and isinstance(g, float) and isinstance(b, float):
-        r *= 255
-        g *= 255
-        b *= 255
+def rgb_to_hex(rgb) -> str:
+    """
+        hex_to_rgb((0.49, 1.0, 0.0)) -> '#ff8833'
+    """
+    all_floats = True
+    for v in rgb:
+        if not isinstance(v, float):
+            all_floats = False
+            break
 
-    r = clip(int(r), 0, 255)
-    g = clip(int(g), 0, 255)
-    b = clip(int(b), 0, 255)
+    if all_floats:
+        rgb = tuple(clip(int(v*255), 0, 255) for v in rgb)
+    else:
+        rgb = tuple(clip(v, 0, 255) for v in rgb)
+    return f'#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}'
 
-    return f'#{r:02x}{g:02x}{b:02x}'
+
+def scale_hsl(rgb, hue: float = 1.0, sat: float = 1.0, lum: float = 1.0) -> tuple[float, ...]:
+    h, s, l = rgb_to_hls(*rgb)
+    return hls_to_rgb(h*hue, s*sat, l*lum)
+
+
+def set_hsl(rgb,
+            hue: float | None = None,
+            sat: float | None = None,
+            lum: float | None = None) -> tuple[float, ...]:
+
+    h, s, l = rgb_to_hls(*rgb)
+
+    if hue: h *= hue
+    if sat: h *= sat
+    if lum: h *= lum
+
+    return hls_to_rgb(h, l, s*sat)
+
+
+def hex_to_rgb(hex: str) -> tuple[float, ...]:
+    """
+    hex_to_rgb('#ff8833') -> (0.49, 1.0, 0.0)
+    """
+    return tuple(int(hex[i:i+2], 16)/255 for i in range(1, len(hex)-1, 2))
