@@ -14,7 +14,7 @@ from typing import Literal
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
-        super().__init__(canvas, frame_delay=4)
+        super().__init__(canvas, frame_delay=0)
 
         self.widgets = widgets
 
@@ -36,6 +36,9 @@ class CustomAnim(Animation):
         self.update_info()
 
         npt = 150
+        marker_size = 8
+        markers = ('o', 'o', 'o')
+
         self.plt_t_range = .05  #(2 * pi * 3) / self.fg
         axs = self.widgets['figs'][0].axes
 
@@ -51,9 +54,13 @@ class CustomAnim(Animation):
         self.plt_t.extend(t)
 
         self.plt_lines = {
+            # 'vg_line': (axs[0].plot((0, 0), (-2, 2), '-.k', lw=1.5))[0],
             'vg_a': (axs[0].plot(self.plt_t, self.plt_vgs[0], color=cl['a'], lw=2))[0],
             'vg_b': (axs[0].plot(self.plt_t, self.plt_vgs[1], color=cl['b'], lw=2))[0],
             'vg_c': (axs[0].plot(self.plt_t, self.plt_vgs[2], color=cl['c'], lw=2))[0],
+            'vg_a_marker': (axs[0].plot(0, 0, color=cl['a'], marker=markers[0], markersize=marker_size, lw=2))[0],
+            'vg_b_marker': (axs[0].plot(0, 0, color=cl['b'], marker=markers[1], markersize=marker_size, lw=2))[0],
+            'vg_c_marker': (axs[0].plot(0, 0, color=cl['c'], marker=markers[2], markersize=marker_size, lw=2))[0],
         }
         axs[0].set_ylim(-1.2, 1.2)
         axs[0].set_xlim(-self.plt_t_range, 0.0)
@@ -243,22 +250,27 @@ class CustomAnim(Animation):
 
         # plot resample
         if self.run:
+            m = max(min(self.fg / 60, 1.0), -1.0)
             for phases in range(3):
-                self.plt_vgs[phases].append(currents_s[phases])
+                self.plt_vgs[phases].append(currents_s[phases] * m)
             self.plt_t.append(self.t)
 
-        redraw_plt = frame_count % 4 == 0
+
+        redraw_plt = frame_count % 2 == 0
+        phases = ('a', 'b', 'c')
         if redraw_plt:
-            self.plt_lines['vg_a'].set_ydata(self.plt_vgs[0])
-            self.plt_lines['vg_b'].set_ydata(self.plt_vgs[1])
-            self.plt_lines['vg_c'].set_ydata(self.plt_vgs[2])
-            self.plt_lines['vg_a'].set_xdata(self.plt_t)
-            self.plt_lines['vg_b'].set_xdata(self.plt_t)
-            self.plt_lines['vg_c'].set_xdata(self.plt_t)
-            t_max = max(self.plt_t)
-            t_min = min(self.plt_t)
-            # print(t_min, t_max)
+            for k, phase in enumerate(phases):
+                self.plt_lines['vg_' + phase].set_ydata(self.plt_vgs[k])
+                self.plt_lines['vg_' + phase].set_xdata(self.plt_t)
+                self.plt_lines['vg_' + phase + '_marker'].set_ydata((self.plt_vgs[k][-1], self.plt_vgs[k][-1]))
+                self.plt_lines['vg_' + phase + '_marker'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
+            # self.plt_lines['vg_line'].set_ydata((-2, 2))
+            # self.plt_lines['vg_line'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
+            pad = 0.1 / self.time_factor
+            t_max = max(self.plt_t)+pad
+            t_min = min(self.plt_t)+pad
             self.widgets['figs'][0].axes[0].set_xlim(t_min, t_max)
+
 
         # cores dinâmicas baseadas nas correntes do estator
         colors_s =[]
