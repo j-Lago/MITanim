@@ -13,8 +13,12 @@ class Animation(ABC):
 
         self.canvas = canvas
         self.frame_delay = frame_delay
-        self.canvas.window.protocol("WM_DELETE_WINDOW", self.window_close_button)
-        self._task = None
+
+        self._close_next_refresh = False
+        def close_next_refresh():
+            self._close_next_refresh = True
+        self.canvas.window.protocol("WM_DELETE_WINDOW", close_next_refresh)
+
 
     def create_primitive(self, *args, **kwargs) -> Primitive:
         return Primitive(self.canvas,  *args, **kwargs)
@@ -28,17 +32,16 @@ class Animation(ABC):
         return t, dt, self._frame_count
 
 
-    def window_close_button(self):
-        if self._task is not None:
-            self.canvas.window.after_cancel(self._task)
-        self.canvas.window.destroy()
-
 
     def loop(self):
         t, dt, frame_count = self._start_frame_time_counter()
         self.refresh(t, dt, frame_count)
 
-        self._task = self.canvas.window.after(self.frame_delay, self.loop)
+        if not self._close_next_refresh:
+            self.canvas.window.after(self.frame_delay, self.loop)
+        else:
+            self.canvas.window.destroy()
+
 
     # @abstractmethod
     # def binds(self):
