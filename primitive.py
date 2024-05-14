@@ -146,7 +146,7 @@ class Primitive:
         self.coords = transformations.scale(coords, factor, center)
         return self
 
-    def _create(self, **kwargs):
+    def _create(self, dont_draw=False, **kwargs):
         # print('... >> ', kwargs)
         kwargs['outline'] = kwargs.pop('stroke', '')
         match self.shape:
@@ -166,7 +166,9 @@ class Primitive:
                 raise ValueError(f"'primitive_type' ({self.shape}) inválido")
             case _:
                 raise ValueError(f"'primitive_type' ({self.shape}) inválido")
-        self.draw()
+
+        if not dont_draw:
+            self.draw()
 
     def delete(self):
         self._canvas.delete(self._handle)
@@ -188,9 +190,10 @@ class Primitive:
 
 
     def denorm_coords(self) -> Coords:
-        if self.shape == 'circle' and len(self.coords) == 3:
-            ret = self._denorm_coords_circle_to_oval()
-            return ret
+        if hasattr(self, 'shape'):
+            if self.shape == 'circle' and len(self.coords) == 3:
+                ret = self._denorm_coords_circle_to_oval()
+                return ret
 
         return denorm_coords(self._canvas, self.coords)
 

@@ -13,6 +13,7 @@ from collections import deque
 from statistics import mean
 from typing import Literal
 from MITsim import MITsim
+from gvec import GraphicVec2
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
@@ -205,7 +206,7 @@ class CustomAnim(Animation):
         self.prims['extra_s']['flux_a'] = self.create_flux_from_quarter(orientation=0.0, color=cl['a'])
         self.prims['extra_s']['flux_b'] = self.create_flux_from_quarter(orientation=2 * pi / 3, color=cl['b'])
         self.prims['extra_s']['flux_c'] = self.create_flux_from_quarter(orientation=-2 * pi / 3, color=cl['c'])
-        self.prims['extra_s']['flux_s'] = self.create_flux_from_quarter(orientation=0.0, color=cl['flux_s'])
+        self.prims['extra_s']['flux_s'] = self.create_flux_from_quarter(orientation=0.0, color=cl['s'])
 
 
         # stator windings
@@ -244,7 +245,20 @@ class CustomAnim(Animation):
         for i, p in enumerate(self.prims['extra_s']['esp_front']):
             p.fill = cl[('a', 'b', 'c')[i // self.slots_ns_alt % 3]]
 
+        self.prims['stator']['vec'] = [
+            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['a']),
+            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['b']),
+            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['c']),
+            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['s']),
+        ]
+        for i, prims in enumerate(self.prims['stator']['vec']):
+            prims.rotate(i*2*pi/3)
+
+        self.create_primitive('circle', (0.0, 0.0, 0.01), fill=cl['airgap'], stroke=cl['outline'])
+
         self.update_esp_and_cutout_visibility()
+
+
 
     def create_flux_from_quarter(self, orientation=0.0, color: str | None = None):
         orientation += pi
@@ -297,15 +311,6 @@ class CustomAnim(Animation):
             y1s[k] = abs(self.mit[self.display_mit_ax1.current_key])
             y0s[k] = self.mit.Tind
 
-
-        # wmax = 4600.0 / 30.0 *pi
-        # self.mit.V1 = 1.0 * self.V1nom
-        # self.mit.f = self.fg
-        # mit_curves = self.mit.solve_range(-wmax, wmax, self.ax_npt, [self.display_mit_ax1.current_key, 'Tind'])
-        # y1s = abs(mit_curves[self.display_mit_ax1.current_key])
-        # y0s = mit_curves['Tind']
-        # nrs = mit_curves['nr']
-        #
         self.plt_lines['I1'].set_ydata(y1s)
         self.plt_lines['I1'].set_xdata(nrs)
         self.plt_lines['Tind'].set_ydata(y0s)
@@ -366,8 +371,6 @@ class CustomAnim(Animation):
                 ax0_curves = tuple(amp*sin(self.the - pi / 2 - 2 * pi / 3 * k + phi) for k in range(3))
                 self.plt_vgs[phase_id].append(ax0_curves[phase_id])
 
-
-
         redraw_plt = frame_count % 2 == 0
         phases = ('a', 'b', 'c')
         if redraw_plt:
@@ -421,12 +424,17 @@ class CustomAnim(Animation):
         tip = assets['quarter_flux']['arrowshape']
         max_width = 6
         for phase_id in range(3):
+            s = currents_s[phase_id]
             if self.prims['extra_s'][groups[phase_id]][0].visible:
                 for prims in *self.prims['extra_s'][groups[phase_id]],:
-                    s = currents_s[phase_id]
                     prims.arrowshape = (tip[0] * s, tip[1] * s, tip[2] * fabs(s))
                     prims.width = max_width * fabs(s)
                     prims.fill = colors_s[phase_id]
+
+            self.prims['stator']['vec'][phase_id].vec = rect(s * 0.4, phase_id * 2 * pi / 3 + self.ths)
+        self.prims['stator']['vec'][3].vec = self.prims['stator']['vec'][0].vec + \
+                                             self.prims['stator']['vec'][1].vec + \
+                                             self.prims['stator']['vec'][2].vec
 
         # stator flux animation
         if self.prims['extra_s']['flux_s'][0].visible:

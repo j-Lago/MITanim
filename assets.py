@@ -12,7 +12,7 @@ cl = {'bg': '#ffffff',
           'z': '#33cc66',
           'Fe': '#cccccc',
           'shaft': '#777777',
-          'flux_s': '#773191',
+          's': '#773191',
           'I1': '#5716aa',
           'Tind': '#11a322',
           'ws_cursor': '#ff7777',
@@ -47,6 +47,7 @@ assets = {
     'keyway':                {'shape': 'polygon',   'fill': cl['Fe'],     'stroke': '',            'width': w, 'coords': (-k[0], k[1]+s, -k[0], -k[1]+s, k[0], -k[1]+s, k[0], k[1]+s)},
     'keyway_outline':        {'shape': 'line',      'fill': '',           'stroke': cl['outline'], 'width': w, 'coords': (-k[0], s+ko, -k[0], -k[1]+s, k[0], -k[1]+s, k[0], s+ko)},
     'mount':                 {'shape': 'polygon',   'fill': cl['Fe'],     'stroke': cl['outline'], 'width': w, 'coords': (.52, -.65, .7, -.98, .35, -.98, .25, -.7)},
+    'vec':                   {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': w, 'coords': (0.0, 0.0, 0.65, 0.0)},
 }
 
 

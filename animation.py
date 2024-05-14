@@ -15,8 +15,7 @@ class Animation(ABC):
         self.frame_delay = frame_delay
 
         self._close_next_refresh = False
-        def close_next_refresh():
-            self._close_next_refresh = True
+        def close_next_refresh(): self._close_next_refresh = True
         self.canvas.window.protocol("WM_DELETE_WINDOW", close_next_refresh)
 
 
