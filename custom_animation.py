@@ -19,6 +19,8 @@ class CustomAnim(Animation):
         super().__init__(canvas, frame_delay=0)
 
         self.widgets = widgets
+        self.dt_filter_buffer = deque(maxlen=100)
+        self.dc_filter_buffer = deque(maxlen=100)
 
         self.t = 0.0
         self.ths = 0.0
@@ -31,19 +33,19 @@ class CustomAnim(Animation):
 
         self.V1nom = 380.0
 
+
+
+
+        self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})  # 'um': fator de conversão
+        self.display_mit_ax0 = CircularDict({'V1': 500, 'I2': 12, 'I1': 12})   # 'atributo': ylim
+        self.display_mit_ax1 = CircularDict({'I2': 1, 'I1': 1, 'nan': 0})      # value não utilizado
+        self.esp_front_opacity = CircularDict({'': 0, 'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
         self.dynamic_colors = BoolVar(True)
 
 
-        self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
-        self.display_mit_ax0 = CircularDict({'V1': 500, 'I2': 12, 'I1': 12})  # 'atributo': escala
-        self.display_mit_ax1 = CircularDict({'I2': 1, 'I1': 1, 'nan': 0})  # 'atributo': escala
 
 
-        self.dt_filter_buffer = deque(maxlen=100)
-        self.dc_filter_buffer = deque(maxlen=100)
-
-
-        self.ax_npt = 150
+        self.ax_npt = 100
         marker_size = 8
         markers = ('o', 'o', 'o')
 
@@ -628,15 +630,42 @@ class CustomAnim(Animation):
             # print(self.ns, self.nr, )
             self.update_esp_and_cutout_visibility()
 
-        # def checkbutton_change_Tcarga():
-        #     checkbutton_Tcarga = self.dynamic_colors.get()
+        def change_esp_front_opacity():
+            next(self.esp_front_opacity)
 
+            parts = ['extra_s', 'extra_r']
+            groups = ['esp_front']
+            for part in parts:
+                for group in groups:
+                    for k, prims in enumerate(self.prims[part][group]):
+                        self.prims[part][group][k].stipple = self.esp_front_opacity.current_key
 
-
+            # parts = ['extra_s', 'extra_r']
+            # groups = ['esp_front']
+            # n = {'stator': self.slots_ns, 'rotor': self.slots_nr, 'extra_s': self.slots_ns, 'extra_r': self.slots_nr}
+            # if self.slots_ns == 1:
+            #     for part in parts:
+            #         for group in groups:
+            #             for k, prims in enumerate(self.prims[part][group]):
+            #                 if ((k + 1) // n[part] % 3) != 2:
+            #                     self.prims[part][group][k].visible = False
+            #                 else:
+            #                     self.prims[part][group][k].visible = visibility
+            #                     self.prims[part][group][k].stipple = stipple
+            # else:
+            #     for part in parts:
+            #         for group in groups:
+            #             for k, prims in enumerate(self.prims[part][group]):
+            #                 self.prims[part][group][k].visible = visibility
+            #                 self.prims[part][group][k].stipple = stipple
+            #
+            # self.update_esp_and_cutout_visibility()
 
 
         self.widgets['Tcarga'].configure(variable=self.dynamic_colors)
         # self.widgets['Tcarga'].configure(command=checkbutton_change_Tcarga)
+
+        self.canvas.window.bind('o', lambda event: change_esp_front_opacity())
 
 
         dw_inc = 1

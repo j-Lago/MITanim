@@ -68,7 +68,6 @@ def main():
 
     anim = CustomAnim(canvas, widgets)
     anim.loop()
-
     window.mainloop()
 
 

@@ -115,6 +115,14 @@ class Primitive:
     def visible(self, visible):
         self._canvas.itemconfig(self._handle, state='normal' if visible else 'hidden')
 
+    @property
+    def stipple(self) -> str:
+        return self._canvas.itemcget(self._handle, 'stipple')
+
+    @stipple.setter
+    def stipple(self, stipple):
+        self._canvas.itemconfig(self._handle, stipple=stipple)
+
     def reset_transformations(self):
         self.coords = self.original_coords
 
