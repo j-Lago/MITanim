@@ -10,6 +10,7 @@ from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationTool
 
 
 
+
 def main():
 
     WIDTH, HEIGHT = 700, 700
@@ -28,7 +29,11 @@ def main():
         'fps': ('Poor Richard', 14),
     }
 
-    infos = tk.Frame(bg=cl['bg'])
+    infos = tk.Frame(window, bg=cl['bg'])
+    controls = tk.Frame(window, bg=cl['bg'])
+
+    # teste = tk.Checkbutton(controls, text='Use Metric')
+    # teste.state()
 
     widgets = {
         'fps': tk.Label(window, text='fps:', font=fonts['fps'], fg='#bb5533', bg=cl['bg']),
@@ -40,7 +45,8 @@ def main():
         'slip': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
         'time_factor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
         'frame_delay': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'figs': [fig0, fig1]
+        'Tcarga': tk.Checkbutton(controls, text='windings dynamic colors', bg=cl['bg']),
+        'figs': [fig0, fig1],
     }
 
     widgets['canvas_fig0'].get_tk_widget().pack(anchor='ne', side='top', expand=0)
@@ -52,6 +58,9 @@ def main():
     widgets['slip'].pack(anchor='w', fill='none', side='top')
     widgets['time_factor'].pack(anchor='w', fill='none', side='top', expand=0)
     widgets['frame_delay'].pack(anchor='w', fill='none', side='top')
+
+    widgets['Tcarga'].pack(anchor='w', fill='none', side='bottom')
+    controls.pack(side='right')
     infos.pack(side='right')
 
     canvas.pack()

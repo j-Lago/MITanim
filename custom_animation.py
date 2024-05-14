@@ -31,7 +31,9 @@ class CustomAnim(Animation):
 
         self.V1nom = 380.0
 
-        self.dynamic_colors = True
+        # self.dynamic_colors = True
+        self.dynamic_colors = tk.IntVar()
+
 
         self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
         self.display_mit_ax0 = CircularDict({'V1': 500, 'I2': 12, 'I1': 12})  # 'atributo': escala
@@ -391,7 +393,7 @@ class CustomAnim(Animation):
         for k, v in enumerate(currents_s):
             rgb = hex_to_rgb((cl['a'], cl['b'], cl['c'])[k % 3])
 
-            f = abs(currents_s[k % 3]) if self.dynamic_colors else 1.0
+            f = abs(currents_s[k % 3]) if self.dynamic_colors.get() else 1.0
             colors_s.append(rgb_to_hex(scale_hsl(rgb, hue=1, sat=(1-f)*0.05+0.95, lum=sqrt(f) * 1.2)))
 
         # stator
@@ -627,24 +629,26 @@ class CustomAnim(Animation):
             # print(self.ns, self.nr, )
             self.update_esp_and_cutout_visibility()
 
+        # def checkbutton_change_Tcarga():
+        #     checkbutton_Tcarga = self.dynamic_colors.get()
 
 
-                # for k, p in enumerate(self.prims['extra_s']['esp_front']):
-                #     if ((k + 1) // self.ns % 3) != 2:
-                #         p.visible = False
-                #         prims.fill = colors_s[k // self.ns % 3]
+
+
+
+        self.widgets['Tcarga'].configure(variable=self.dynamic_colors)
+        # self.widgets['Tcarga'].configure(command=checkbutton_change_Tcarga)
 
 
         dw_inc = 1
         f_max = 70
-        self.canvas.window.bind('n', lambda event: change_nesp())
-
         self.canvas.window.bind('+', lambda event: inc_value('ws', dw_inc, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('ws', -dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Right>', lambda event: inc_value('wr', dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Left>',  lambda event: inc_value('wr', -dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Up>',    lambda event: inc_value('we', dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Down>',  lambda event: inc_value('we', -dw_inc, -f_max, f_max))
+        self.canvas.window.bind('n', lambda event: change_nesp())
 
         self.canvas.window.bind('.', lambda event: inc_value('time_factor', self.time_factor*.2, 32.45273575943723503208293147346, 1492.992))
         self.canvas.window.bind(',', lambda event: inc_value('time_factor', -self.time_factor*.16666666666666666666666666666667, 32.45273575943723503208293147346, 1492.992))
@@ -701,4 +705,6 @@ class CircularDict(dict):
         keys = list(self.keys())
         self._current_key = keys[(keys.index(self._current_key) + 1) % len(keys)]
         return self._current_key
+
+
 
