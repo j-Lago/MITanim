@@ -13,6 +13,11 @@ cl = {'bg': '#ffffff',
           'Fe': '#cccccc',
           'shaft': '#777777',
           'flux_s': '#773191',
+          'I1': '#5716aa',
+          'Tind': '#11a322',
+          'ws_cursor': '#ff7777',
+          'wr_cursor': '#000000',
+          'grid': '#3d3d3d',
           }
 
 w = 2

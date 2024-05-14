@@ -13,8 +13,6 @@ class Animation(ABC):
         self.canvas = canvas
         self.frame_delay = frame_delay
 
-        self.binds()
-
     def create_primitive(self, *args, **kwargs) -> Primitive:
         return Primitive(self.canvas,  *args, **kwargs)
 
@@ -32,11 +30,11 @@ class Animation(ABC):
 
         self.canvas.window.after(self.frame_delay, self.loop)
 
-    @abstractmethod
-    def binds(self):
-        pass
-        # window.bind('<Right>', lambda event: call_function_1())
-        # window.bind('<Left>',  lambda event: call_function_2())
+    # @abstractmethod
+    # def binds(self):
+    #     pass
+    #     window.bind('<Right>', lambda event: call_function_1())
+    #     window.bind('<Left>',  lambda event: call_function_2())
 
     @abstractmethod
     def refresh(self, t: float, dt: float, frame_count: int):

@@ -1,16 +1,18 @@
 import tkinter as tk
+from cmath import polar, rect, phase
 import numpy as np
 from tkinter import messagebox
 from math import sin, cos, pi, atan2, sqrt, fabs
 from NormCanvas import NormCanvas
 from primitive import Primitive
-from transforms import translate, rotate, scale, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip
+from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip
 import time
 from assets import assets, cl, binds_message
 from animation import Animation
 from collections import deque
 from statistics import mean
 from typing import Literal
+from MITsim import MITsim
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
@@ -27,34 +29,62 @@ class CustomAnim(Animation):
         self.fg = 60
         self.time_factor = 140
 
-        self.dynamic_colors = False
+        self.V1nom = 380.0
+
+        self.dynamic_colors = True
 
         self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
-        self.display_mu.current_key = 'rpm'
+        self.display_mit_ax0 = CircularDict({'V1': 500, 'I2': 12, 'I1': 12})  # 'atributo': escala
+        self.display_mit_ax1 = CircularDict({'I2': 1, 'I1': 1, 'nan': 0})  # 'atributo': escala
 
 
         self.dt_filter_buffer = deque(maxlen=100)
         self.dc_filter_buffer = deque(maxlen=100)
-        self.update_info()
 
-        npt = 150
+
+        self.ax_npt = 150
         marker_size = 8
         markers = ('o', 'o', 'o')
 
         self.plt_t_range = .05  #(2 * pi * 3) / self.fg
-        axs = self.widgets['figs'][0].axes
+        axs = (self.widgets['figs'][0].axes[0],
+               self.widgets['figs'][1].axes[0],
+               )
 
-        nans = np.empty(npt, float)
+        nans = np.empty(self.ax_npt, float)
         nans.fill(np.nan)
 
 
-        t = np.arange(-self.plt_t_range, 0.0, self.plt_t_range / npt)
-        self.plt_vgs = (deque(maxlen=npt), deque(maxlen=npt), deque(maxlen=npt))
+        t = np.arange(-self.plt_t_range, 0.0, self.plt_t_range / self.ax_npt)
+        self.plt_vgs = (deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt))
         for ys in self.plt_vgs:
             ys.extend(nans)
-        self.plt_t = deque(maxlen=npt)
+        self.plt_t = deque(maxlen=self.ax_npt)
         self.plt_t.extend(t)
 
+        Zbase = 1
+        self.mit = MITsim(R1=14.7000 * Zbase,
+                     X1=14.9862 * Zbase,
+                     R2=10.5445 * Zbase,
+                     X2=22.4793 * Zbase,
+                     Rc=1.6261e+03 * Zbase,
+                     Xm=419.2075 * Zbase,
+                     V1=380.0,
+                     f0=60.0,
+                     p=2
+                     )
+
+        wmax = (2 * pi * 70) * 1.2
+        self.mit.V1 = 1.0 * self.V1nom
+        self.mit.f = self.fg
+        mit_curves = self.mit.solve_range(-wmax, wmax, self.ax_npt, ['I1', 'Tind'])
+        y1s = abs(mit_curves['I1'])
+        y0s = mit_curves['Tind']
+        nrs = mit_curves['nr']
+
+        axs[0].axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
+        axs[1].axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
+        axs[1].axvline(0, linestyle='--', color=cl['grid'], linewidth=1)
         self.plt_lines = {
             # 'vg_line': (axs[0].plot((0, 0), (-2, 2), '-.k', lw=1.5))[0],
             'vg_a': (axs[0].plot(self.plt_t, self.plt_vgs[0], color=cl['a'], lw=2))[0],
@@ -63,20 +93,38 @@ class CustomAnim(Animation):
             'vg_a_marker': (axs[0].plot(0, 0, color=cl['a'], marker=markers[0], markersize=marker_size, lw=2))[0],
             'vg_b_marker': (axs[0].plot(0, 0, color=cl['b'], marker=markers[1], markersize=marker_size, lw=2))[0],
             'vg_c_marker': (axs[0].plot(0, 0, color=cl['c'], marker=markers[2], markersize=marker_size, lw=2))[0],
+
+            # 'grid_x0': (axs[1].plot((0, 0), (-10000, 10000), '--', color=cl['grid'], lw=1))[0],
+            # 'grid_y0': (axs[1].plot((-10000, 10000), (0, 0), '--', color=cl['grid'], lw=1))[0],
+            # 'ws_cursor': (axs[1].plot((self.mit.ws, self.mit.ws), (-10000, 10000), '--', color=cl['ws_cursor'], lw=1))[0],
+            # 'wr_cursor': (axs[1].plot((wrs[0], wrs[0]), (-10000, 10000), '-.', color=cl['wr_cursor'], lw=1))[0],
+
+            'ws_cursor': (axs[1].axvline(self.mit.ws, linestyle='-.', color=cl['ws_cursor'], lw=1)),
+            'wr_cursor': (axs[1].axvline(self.mit.wr, linestyle='-.', color=cl['wr_cursor'], lw=1)),
+            'Tind': (axs[1].plot(nrs, y0s, color=cl['Tind'], lw=2))[0],
+            'I1': (axs[1].plot(nrs, y1s, color=cl['I1'], lw=2))[0],
+            'Tind_marker': (axs[1].plot(nrs[0], y0s[0], color=cl['Tind'], marker=markers[2], markersize=marker_size, lw=2))[0],
+            'I1_marker': (axs[1].plot(nrs[0], y1s[0], color=cl['I1'], marker=markers[2], markersize=marker_size, lw=2))[0],
         }
+
         axs[0].set_ylim(-1.2, 1.2)
         axs[0].set_xlim(-self.plt_t_range, 0.0)
         axs[0].set_xticks([])
 
+
+        # axs[1].set_ylim(-0, 11)
+        axs[1].set_xlim(0, self.mit.ws)
+
+
         widgets['canvas_fig0'].draw()
+        widgets['canvas_fig1'].draw()
 
         self.run = False
 
-        self.ns_alt = 3   # todo: so funciona para 3 e 1
-        self.nr_alt = 3   # todo: so funciona para 3 e 1
-        self.ns = 1
-        self.nr = 1
-
+        self.slots_ns_alt = 3  # todo: so funciona para 3 e 1
+        self.slots_nr_alt = 3  # todo: so funciona para 3 e 1
+        self.slots_ns = 1
+        self.slots_nr = 1
         self.prims = {'stator': {},
                       'rotor': {},
                       'extra_s': {},
@@ -85,180 +133,137 @@ class CustomAnim(Animation):
 
 
 
+        self.create_original_draw()
+        self.draw_all()
+        self.binds()
+
+
+    def create_original_draw(self):
+
+        # stator outer core
         self.prims['stator']['core'] = [
             self.create_primitive(**assets['mount']),
-            self.create_primitive(**assets['mount']).scale((-1.0,1.0)),
+            self.create_primitive(**assets['mount'], transforms=(scale, (-1.0, 1.0))),
             self.create_primitive(**assets['stator_outer']),
             self.create_primitive(**assets['stator_inner']),
         ]
 
+        # stator slots
+        n_prims = self.slots_ns_alt * 6
         self.prims['stator']['cutout'] = [
-            *(self.create_primitive(**assets['stator_cutout']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3)
-              for i in range(self.ns_alt * 6)),
+            *(self.create_primitive(**assets['stator_cutout'], transforms=(rotate, -2 * pi * (i - 1) / n_prims))
+              for i in range(n_prims)),
         ]
-
         self.prims['stator']['cutout_outline'] = [
-            *(self.create_primitive(**assets['stator_cutout_outline']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3)
-              for i in range(self.ns_alt * 6)),
+            *(self.create_primitive(**assets['stator_cutout_outline'], transforms=(rotate, -2 * pi * (i - 1) / n_prims))
+              for i in range(n_prims)),
         ]
 
 
+        # rotor outer core
         self.prims['rotor']['core'] = [
             self.create_primitive(**assets['rotor_outer']),
-            ]
+        ]
 
+        # roto slots
+        n_prims = self.slots_nr_alt * 6
         self.prims['rotor']['cutout'] = [
-            *(self.create_primitive(**assets['rotor_cutout']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3)
-              for i in range(self.ns_alt * 6)),
+            *(self.create_primitive(**assets['rotor_cutout'], transforms=(rotate, -2 * pi * (i - 1) / n_prims))
+              for i in range(n_prims)),
         ]
-
         self.prims['rotor']['cutout_outline'] = [
-            *(self.create_primitive(**assets['rotor_cutout_outline']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3)
-              for i in range(self.nr_alt * 6)),
+            *(self.create_primitive(**assets['rotor_cutout_outline'], transforms=(rotate, -2 * pi * (i - 1) / n_prims))
+              for i in range(n_prims)),
         ]
 
+
+        # roto shaft
         self.prims['rotor']['core'].append(self.create_primitive(**assets['shaft']))
         self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway']))
         self.prims['rotor']['core'].append(self.create_primitive(**assets['keyway_outline']))
 
+        # stator magnetic axis
         self.prims['stator']['axis'] = [
-            *(self.create_primitive(**assets['stator_axis']).rotate(2 * pi / 3 * i) for i in range(3)),
+            *(self.create_primitive(**assets['stator_axis'], transforms=(rotate, 2 * pi / 3 * i)) for i in
+              range(3)),
         ]
         for i, p in enumerate(self.prims['stator']['axis']):
             p.stroke = cl[('a', 'b', 'c')[i % 3]]
 
+        # rotor magnetic axis
         self.prims['rotor']['axis'] = [
             *(self.create_primitive(**assets['rotor_axis']).rotate(2 * pi / 3 * i) for i in range(3)),
         ]
         for i, p in enumerate(self.prims['rotor']['axis']):
             p.stroke = cl[('x', 'y', 'z')[i % 3]]
 
-        t = pi
-        self.prims['extra_s']['flux_a'] = [
-            (self.create_primitive(**assets['quarter_flux'])).reverse().rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-        ]
 
-        t = 2 * pi / 3 + pi
-        self.prims['extra_s']['flux_b'] = [
-            (self.create_primitive(**assets['quarter_flux'])).reverse().rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-        ]
-        for p in self.prims['extra_s']['flux_b']: p.stroke = cl['b']
+        # stator flux
+        self.prims['extra_s']['flux_a'] = self.create_flux_from_quarter(orientation=0.0, color=cl['a'])
+        self.prims['extra_s']['flux_b'] = self.create_flux_from_quarter(orientation=2 * pi / 3, color=cl['b'])
+        self.prims['extra_s']['flux_c'] = self.create_flux_from_quarter(orientation=-2 * pi / 3, color=cl['c'])
+        self.prims['extra_s']['flux_s'] = self.create_flux_from_quarter(orientation=0.0, color=cl['flux_s'])
 
-        t = -2 * pi / 3 + pi
-        self.prims['extra_s']['flux_c'] = [
-            (self.create_primitive(**assets['quarter_flux'])).reverse().rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-        ]
-        for p in self.prims['extra_s']['flux_c']: p.stroke = cl['c']
 
-        t = pi
-        self.prims['extra_s']['flux_s'] = [
-            (self.create_primitive(**assets['quarter_flux'])).reverse().rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.8, .77), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.8, .77), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, 1)).scale((.65, .5), center=(
-            0.0, -0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).scale((-1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-            (self.create_primitive(**assets['quarter_flux'])).reverse().scale((1, -1)).scale((.65, .5), center=(
-            0.0, 0.50571428571428571428571428571429)).rotate(t),
-        ]
-        for p in self.prims['extra_s']['flux_s']: p.stroke = cl['flux_s']
-
+        # stator windings
+        n_prims = 6 * self.slots_ns_alt
         self.prims['stator']['esp'] = [
-            *(self.create_primitive(**assets['stator_esp']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3) for i in range(self.ns_alt * 6)),
+            *(self.create_primitive(**assets['stator_esp'], transforms=(rotate, (-2 * pi * (i - 1)) / n_prims))
+              for i in range(n_prims)),
         ]
         for i, p in enumerate(self.prims['stator']['esp']):
-            p.fill = cl[('a', 'b', 'c')[i // self.ns_alt % 3]]
+            p.fill = cl[('a', 'b', 'c')[i // self.slots_ns_alt % 3]]
 
+        # rotor windings
+        n_prims = self.slots_nr_alt * 6
         self.prims['rotor']['esp'] = [
-            *(self.create_primitive(**assets['rotor_esp']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3) for i in range(self.nr_alt * 6)),
+            *(self.create_primitive(**assets['rotor_esp'], transforms=(rotate, (-2 * pi * (i - 1)) / n_prims))
+              for i in range(n_prims)),
         ]
         for i, p in enumerate(self.prims['rotor']['esp']):
-            p.fill = cl[('x', 'y', 'z')[i // self.nr_alt % 3]]
+            p.fill = cl[('x', 'y', 'z')[i // self.slots_nr_alt % 3]]
 
+        # rotor windings front
+        n_prims = self.slots_nr_alt * 3
         self.prims['extra_r']['esp_front'] = [
-            *(self.create_primitive(**assets['rotor_esp_front']).rotate(-2 * pi / self.nr_alt / 6 * i + pi / self.nr_alt / 3) for i in range(3 * self.nr_alt)),
+            *(self.create_primitive(**assets['rotor_esp_front'], transforms=(rotate, 2 * pi * (i-1) / n_prims))
+              for i in range(n_prims)),
         ]
         for i, p in enumerate(self.prims['extra_r']['esp_front']):
-            p.fill = cl[('x', 'y', 'z')[i // self.nr_alt % 3]]
+            p.fill = cl[('x', 'y', 'z')[i // self.slots_nr_alt % 3]]
 
+        # stator windings front
+        n_prims = self.slots_ns_alt * 3
         self.prims['extra_s']['esp_front'] = [
-            *(self.create_primitive(**assets['stator_esp_front']).rotate(-2 * pi / self.ns_alt / 6 * i + pi / self.ns_alt / 3) for i in range(3 * self.ns_alt)),
+            *(self.create_primitive(**assets['stator_esp_front'], transforms=(rotate, 2 * pi * (i - 1) / n_prims))
+              for i in range(n_prims)),
         ]
         for i, p in enumerate(self.prims['extra_s']['esp_front']):
-            p.fill = cl[('a', 'b', 'c')[i // self.ns_alt % 3]]
+            p.fill = cl[('a', 'b', 'c')[i // self.slots_ns_alt % 3]]
 
         self.update_esp_and_cutout_visibility()
 
-        self.draw_all(consolidate_transforms_to_original=True)
+    def create_flux_from_quarter(self, orientation=0.0, color: str | None = None):
+        orientation += pi
+        prims = [
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse, ), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, 1)), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, -1)), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse, ), (scale, (1, -1)), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse, ), (scale, {'factor': (0.8, 0.77), 'center': (0.0, -0.50571428571428571428571428571429)}    ), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, 1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, -1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse, ), (scale, (1, -1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse, ), (scale, {'factor': (.65, .5), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, 1)), (scale, {'factor': (.65, .5), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(scale, (-1, -1)), (scale, {'factor': (.65, .5), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+            (self.create_primitive(**assets['quarter_flux'], transforms=[(reverse,), (scale, (1, -1)), (scale, {'factor': (.65, .5), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        ]
+        if color:
+            for p in prims:
+                p.stroke = color
+
+        return prims
 
     def refresh(self, _, dt, frame_count):
 
@@ -269,30 +274,116 @@ class CustomAnim(Animation):
         # animation clock
         dt /= self.time_factor
 
+        # todo: deletar esse valor e usar resultado da sim
         currents_s = tuple(sin(self.the - pi / 2 - 2 * pi / 3 * k) for k in range(3))
 
         # plot resample
+        m = max(min(self.fg / 60, 1.0), -1.0)
+
+        #Tind vs wr curve
+        wmax = 4600
+        nrs = np.linspace(-wmax, wmax, 200)
+        y0s = np.empty_like(nrs)
+        y1s = np.empty_like(nrs)
+        for k, nr in enumerate(nrs):
+            wr = nr / 30.0 * pi
+            self.mit.V1 = m * self.V1nom
+            self.mit.wr = wr
+            self.mit.f = self.fg
+            self.mit.solve()
+            y1s[k] = abs(self.mit[self.display_mit_ax1.current_key])
+            y0s[k] = self.mit.Tind
+
+
+        # wmax = 4600.0 / 30.0 *pi
+        # self.mit.V1 = 1.0 * self.V1nom
+        # self.mit.f = self.fg
+        # mit_curves = self.mit.solve_range(-wmax, wmax, self.ax_npt, [self.display_mit_ax1.current_key, 'Tind'])
+        # y1s = abs(mit_curves[self.display_mit_ax1.current_key])
+        # y0s = mit_curves['Tind']
+        # nrs = mit_curves['nr']
+        #
+        self.plt_lines['I1'].set_ydata(y1s)
+        self.plt_lines['I1'].set_xdata(nrs)
+        self.plt_lines['Tind'].set_ydata(y0s)
+        self.plt_lines['Tind'].set_xdata(nrs)
+
+        # markers
+        try:
+            s = (self.fg - self.fr) / self.fg
+        except ZeroDivisionError:
+            s = float('nan')
+
+        self.mit.V1 = m * self.V1nom
+        self.mit.wr = self.fr * 2 * pi * 2 / self.mit.p
+        self.mit.f = self.fg
+        self.mit.solve()
+        self.plt_lines['I1_marker'].set_ydata((abs(self.mit[self.display_mit_ax1.current_key]), abs(self.mit[self.display_mit_ax1.current_key])))
+        self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind, self.mit.Tind))
+        nr = self.mit.wr * 30.0 / pi
+        ns = self.mit.ws * 30.0 / pi
+        self.plt_lines['I1_marker'].set_xdata((nr, nr))
+        self.plt_lines['Tind_marker'].set_xdata((nr, nr))
+        self.plt_lines['ws_cursor'].set_xdata((ns, ns))
+        self.plt_lines['wr_cursor'].set_xdata((nr, nr))
+
+        y_pad = 2
+        y_min = min(min(min(y0s), min(y1s)) + 22, -y_pad)
+        y_max = max(max(y0s), max(y1s)) + y_pad
+        xpad = 300
+        ws = self.mit.f * 2 * pi * 2 / self.mit.p
+        x_min = min(-xpad, min(self.mit.wr, ws) * 30.0 / pi - xpad)
+        x_max = max(3600, max(self.mit.wr, ws) * 30.0 / pi + xpad)
+        if (s < 0 and ws > 0) or (s >= 0 and ws <= 0):
+            # self.widgets['figs'][1].axes[0].set_xlim(-0.03*self.mit.ws, 1.2*self.mit.ws)
+            self.widgets['figs'][1].axes[0].set_xlim(x_min, x_max)
+            self.widgets['figs'][1].axes[0].autoscale(enable=True, axis="y", tight=False)
+            # self.widgets['figs'][1].axes[0].set_ylim(y_min - 28, y_max+6)
+        elif (s > 1 and ws > 0) or (s < 1 and ws < 0):
+            # self.widgets['figs'][1].axes[0].set_xlim(-0.2*self.mit.ws, 1.03*self.mit.ws)
+            self.widgets['figs'][1].axes[0].set_xlim(x_min, x_max)
+            # self.widgets['figs'][1].axes[0].set_ylim(y_min, y_max)
+            self.widgets['figs'][1].axes[0].autoscale(enable=True, axis="y", tight=False)
+        else:
+            # self.widgets['figs'][1].axes[0].set_xlim(-0.03*self.mit.ws, 1.03*self.mit.ws)
+            self.widgets['figs'][1].axes[0].set_xlim(x_min, x_max)
+            self.widgets['figs'][1].axes[0].set_ylim(y_min, y_max)
+            # self.widgets['figs'][1].axes[0].autoscale(enable=True, axis="y", tight=False)
+
+        self.widgets['figs'][1].axes[0].set_ylabel(f'Tind {', ' + self.display_mit_ax1.current_key if self.display_mit_ax1.current_key != 'nan' else ''}')
+
+
         if self.run:
-            m = max(min(self.fg / 60, 1.0), -1.0)
-            for phases in range(3):
-                self.plt_vgs[phases].append(currents_s[phases] * m)
+
+            # plot ax0
             self.plt_t.append(self.t)
+            for phase_id in range(3):
+                amp = abs(self.mit[self.display_mit_ax0.current_key])
+                phi = phase(self.mit[self.display_mit_ax0.current_key])
+                ax0_curves = tuple(amp*sin(self.the - pi / 2 - 2 * pi / 3 * k + phi) for k in range(3))
+                self.plt_vgs[phase_id].append(ax0_curves[phase_id])
+
 
 
         redraw_plt = frame_count % 2 == 0
         phases = ('a', 'b', 'c')
         if redraw_plt:
-            for k, phase in enumerate(phases):
-                self.plt_lines['vg_' + phase].set_ydata(self.plt_vgs[k])
-                self.plt_lines['vg_' + phase].set_xdata(self.plt_t)
-                self.plt_lines['vg_' + phase + '_marker'].set_ydata((self.plt_vgs[k][-1], self.plt_vgs[k][-1]))
-                self.plt_lines['vg_' + phase + '_marker'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
+            for k, phase_id in enumerate(phases):
+                self.plt_lines['vg_' + phase_id].set_ydata(self.plt_vgs[k])
+                self.plt_lines['vg_' + phase_id].set_xdata(self.plt_t)
+                self.plt_lines['vg_' + phase_id + '_marker'].set_ydata((self.plt_vgs[k][-1], self.plt_vgs[k][-1]))
+                self.plt_lines['vg_' + phase_id + '_marker'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
             # self.plt_lines['vg_line'].set_ydata((-2, 2))
             # self.plt_lines['vg_line'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
             pad = 0.1 / self.time_factor
             t_max = max(self.plt_t)+pad
             t_min = min(self.plt_t)+pad
+            y_max = self.display_mit_ax0.current_value
+
             self.widgets['figs'][0].axes[0].set_xlim(t_min, t_max)
+            self.widgets['figs'][0].axes[0].set_ylim(-y_max, y_max)
+            self.widgets['figs'][0].axes[0].set_ylabel(f'{self.display_mit_ax0.current_key if self.display_mit_ax0.current_key != 'nan' else ''}')
+
 
 
         # cores dinâmicas baseadas nas correntes do estator
@@ -310,11 +401,11 @@ class CustomAnim(Animation):
                     prims.rotate(self.ths)
 
         # TODO: restaurar
-        # for k, prims in enumerate(self.prims['stator']['esp']):
-        #         prims.fill = colors_s[k//self.ns%3]
-        #
-        # for k, prims in enumerate(self.prims['extra_s']['esp_front']):
-        #     prims.fill = colors_s[k//self.ns % 3]
+        for k, prims in enumerate(self.prims['stator']['esp']):
+            prims.fill = colors_s[k // self.slots_ns_alt % 3]
+
+        for k, prims in enumerate(self.prims['extra_s']['esp_front']):
+            prims.fill = colors_s[k // self.slots_ns_alt % 3]
 
         # rotor
         for part in ['rotor', 'extra_r']:
@@ -342,8 +433,9 @@ class CustomAnim(Animation):
         self.draw_all()
 
         if redraw_plt:
-            self.widgets['figs'][0].canvas.draw()
-            self.widgets['figs'][0].canvas.flush_events()
+            for fig in self.widgets['figs']:
+                fig.canvas.draw()
+                fig.canvas.flush_events()
 
         if self.run:
             self.the = (self.the + dt * self.fg * 2 * pi) % (2 * pi)
@@ -351,6 +443,10 @@ class CustomAnim(Animation):
             self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
             self.t += dt
 
+        self.update_info()
+
+
+    # ------------------------------- end of refresh -------------------------------------
 
 
     def draw_all(self, *args, **kwargs):
@@ -369,16 +465,18 @@ class CustomAnim(Animation):
             um_max_len = max(len(um), um_max_len)
 
         self.widgets['w_stator']   .config(text=f"  vel. estator: {self.fs*um_factor  :>5.0f} {um_name}{' '*(um_max_len-len(um_name))}")
+        self.widgets['w_grid'].config(
+            text=f"    vel. alim.: {self.fg * um_factor_g:>5.0f} {um_name_g}{' ' * (um_max_len - len(um_name_g))}")
         self.widgets['w_rotor']    .config(text=f"    vel. rotor: {self.fr*um_factor  :>5.0f} {um_name}{' '*(um_max_len-len(um_name))}")
-        self.widgets['w_grid']     .config(text=f"    vel. alim.: {self.fg*um_factor_g:>5.0f} {um_name_g}{' '*(um_max_len-len(um_name_g))}")
+        self.widgets['slip'].config(text=f"         slip: {self.mit.s  :>6.2f} pu{' ' * (um_max_len)}")
         self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.0f} x")
         self.widgets['frame_delay'].config(text=f"   frame delay: {self.frame_delay:>5} ms")
 
     def update_esp_and_cutout_visibility(self):
         parts = ['stator', 'rotor']
         groups = ['esp', 'cutout', 'cutout_outline']
-        n = {'stator': self.ns, 'rotor': self.nr, 'extra_s': self.ns, 'extra_r': self.nr}
-        if self.ns == 1:
+        n = {'stator': self.slots_ns, 'rotor': self.slots_nr, 'extra_s': self.slots_ns, 'extra_r': self.slots_nr}
+        if self.slots_ns == 1:
             for part in parts:
                 for group in groups:
                     for k, prims in enumerate(self.prims[part][group]):
@@ -392,7 +490,7 @@ class CustomAnim(Animation):
 
         parts = ['extra_s', 'extra_r']
         groups = ['esp_front']
-        if self.ns == 1:
+        if self.slots_ns == 1:
             for part in parts:
                 for group in groups:
                     for k, prims in enumerate(self.prims[part][group]):
@@ -453,6 +551,19 @@ class CustomAnim(Animation):
             next(self.display_mu)
             self.update_info()
 
+        def change_display(ax=1):
+            match ax:
+                case 0:
+                    next(self.display_mit_ax0)
+                    nans = np.empty(self.ax_npt, float)
+                    nans.fill(np.nan)
+                    for ys in self.plt_vgs:
+                        ys.extend(nans)
+
+                case 1:
+                    next(self.display_mit_ax1)
+                case _: raise ValueError('valor inválido para ax')
+
         def toggle_visibility(parts: Literal['stator', 'rotor'], groups: str | None = None):
 
             # todo: naão funciona 'e'->'n'->'e'
@@ -511,8 +622,8 @@ class CustomAnim(Animation):
 
 
         def change_nesp():
-            self.ns = self.ns_alt if self.ns == 1 else 1
-            self.nr = self.nr_alt if self.nr == 1 else 1
+            self.slots_ns = self.slots_ns_alt if self.slots_ns == 1 else 1
+            self.slots_nr = self.slots_nr_alt if self.slots_nr == 1 else 1
             # print(self.ns, self.nr, )
             self.update_esp_and_cutout_visibility()
 
@@ -542,9 +653,14 @@ class CustomAnim(Animation):
         self.canvas.window.bind('*',       lambda event: inc_value('delay', 1, 0, 30))
         self.canvas.window.bind('/',       lambda event: inc_value('delay', -1, 0, 30))
         self.canvas.window.bind('<space>', lambda event: toggle_run())
-        self.canvas.window.bind('<Button-1>', lambda event: toggle_run())
-        self.canvas.window.bind('<Button-3>', lambda event: show_binds())
+
+        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: change_display(0))
+        self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: change_display(1))
+        # self.canvas.window.bind('<Button-1>', lambda event: toggle_run())
+        # self.canvas.window.bind('<Button-3>', lambda event: show_binds())
+
         # self.canvas.window.bind('<Return>', lambda event: toggle_run())
+        self.canvas.window.bind('<F1>', lambda event: show_binds())
         self.canvas.window.bind('<Escape>', lambda event: reset_time(reset_and_stop=True))
         self.canvas.window.bind('<0>',     lambda event: reset_time())
         self.canvas.window.bind('r',       lambda event: toggle_visibility('rotor'))

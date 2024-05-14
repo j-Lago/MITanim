@@ -1,20 +1,45 @@
 from NormCanvas import NormCanvas
-from transforms import Coords, Point, Numeric, denorm_coords
+from transformations import Coords, Point, Numeric, denorm_coords
 from math import sqrt
-import transforms
+import transformations
 from typing import Literal
 from copy import copy, deepcopy
+
+from types import FunctionType
 
 
 class Primitive:
     def __init__(self, canvas: NormCanvas,
                  shape: Literal['line', 'polygon', 'rectangle', 'square', 'circle', 'oval', 'arc'],
                  coords: Coords,
+                 transforms: tuple[FunctionType, tuple] | list[tuple[FunctionType, tuple]] | tuple[tuple[FunctionType, tuple]] | None = None,
                  **kwargs):
         """
         """
         self._canvas = canvas
         self._handle = None
+
+
+        if transforms:
+            if isinstance(transforms[0], FunctionType):
+                transforms = [transforms]
+            for transform_args in transforms:
+                if len(transform_args) == 2:
+                    transform, args  = transform_args
+                    if isinstance(args, float | int):
+                        coords = transform(coords, args)
+                    elif isinstance(args, tuple):
+                        if isinstance(args[0], float | int):
+                            coords = transform(coords, args)
+                        else:
+                            coords = transform(coords, *args)
+                    elif isinstance(args, dict):
+                        coords = transform(coords, **args)
+
+                else:
+                    coords = transform_args[0](coords)
+
+
         self.coords = coords
         self.original_coords = coords
         self.shape = shape
@@ -95,22 +120,22 @@ class Primitive:
 
     def reverse(self, from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
-        self.coords = transforms.reverse(coords)
+        self.coords = transformations.reverse(coords)
         return self
 
     def rotate(self, angle: Numeric, center: Point = (0, 0), from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
-        self.coords = transforms.rotate(coords, angle, center)
+        self.coords = transformations.rotate(coords, angle, center)
         return self
 
     def translate(self, offset: Point, from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
-        self.coords = transforms.translate(coords, offset)
+        self.coords = transformations.translate(coords, offset)
         return self
 
     def scale(self, factor: Numeric | Point, center: Point = (0, 0), from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
-        self.coords = transforms.scale(coords, factor, center)
+        self.coords = transformations.scale(coords, factor, center)
         return self
 
     def _create(self, **kwargs):
@@ -162,5 +187,12 @@ class Primitive:
         return denorm_coords(self._canvas, self.coords)
 
     def _denorm_coords_circle_to_oval(self) -> Coords:
-        oval_coords = transforms.coords_circle_to_oval(self.coords)
+        oval_coords = transformations.coords_circle_to_oval(self.coords)
         return denorm_coords(self._canvas, oval_coords)
+
+
+class PrimitivesGroup:
+    def __init__(self):
+        pass
+
+

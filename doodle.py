@@ -1,44 +1,43 @@
-
-from transforms import clip, rgb_to_hex, hex_to_rgb
+from MITsim import MITsim
 from colorsys import hls_to_rgb, rgb_to_hls
 from math import pi
 # from collections import OrderedDict
+import numpy as np
+import matplotlib.pyplot as plt
 
 def main():
-    class CircularDict(dict):
-        def __init__(self, *args):
-            dict()
-            super().__init__(*args)
-            keys = list(self.keys())
-            self._current_key = keys[0]
-
-        @property
-        def name(self):
-            return self._current_key
-
-        @property
-        def ratio(self):
-            return self[self._current_key]
-
-        def __next__(self):
-            keys = list(self.keys())
-            self._current_key = keys[(keys.index(self._current_key) + 1) % len(keys)]
-            return self._current_key
+    base = 1 #11.26 * 4  / 1e3
+    mit = MITsim(R1=14.7000 * base,
+                 X1=14.9862 * base,
+                 R2=10.5445 * base,
+                 X2=22.4793 * base,
+                 Rc=1.6261e+03 * base,
+                 Xm=419.2075 * base,
+                 V1=380.0,
+                 f0=60.0,
+                 p=2
+                 )
 
 
-    um = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
-    print(um)
-    print('..', um.name, um.ratio)
-    next(um)
-    print('>>', um.name, um.ratio)
-    next(um)
-    print('>>', um.name, um.ratio)
-    next(um)
-    print('>>', um.name, um.ratio)
 
-    print('-----------')
-    for u in um:
-        print(u, um[u])
+    wrs = np.linspace(0, 377, 200)
+    y0s = np.empty_like(wrs)
+    y1s = np.empty_like(wrs)
+    y2s = np.empty_like(wrs)
+    for k, wr in enumerate(wrs):
+        mit.wr = wr
+        mit.solve()
+        y0s[k] = abs(mit.Im)
+        y1s[k] = abs(mit.I1)
+        y2s[k] = mit.Tind
+
+    print(mit.__dict__['Rc'])
+    print(mit['I1'])
+
+    plt.plot(wrs, y0s)
+    plt.plot(wrs, y1s)
+    plt.plot(wrs, y2s)
+    plt.show()
 
 
 
