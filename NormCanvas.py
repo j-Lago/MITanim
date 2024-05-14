@@ -9,3 +9,11 @@ class NormCanvas(tk.Canvas):
         super().__init__(*args, **kwargs)
         self.window = window
 
+
+class BoolVar(tk.IntVar):
+    def __init__(self, value=False):
+        super().__init__()
+        self.set(value)
+
+    def __bool__(self):
+        return not self.get() == 0

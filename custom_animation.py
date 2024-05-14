@@ -3,7 +3,7 @@ from cmath import polar, rect, phase
 import numpy as np
 from tkinter import messagebox
 from math import sin, cos, pi, atan2, sqrt, fabs
-from NormCanvas import NormCanvas
+from NormCanvas import NormCanvas, BoolVar
 from primitive import Primitive
 from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip
 import time
@@ -31,8 +31,7 @@ class CustomAnim(Animation):
 
         self.V1nom = 380.0
 
-        # self.dynamic_colors = True
-        self.dynamic_colors = tk.IntVar()
+        self.dynamic_colors = BoolVar(True)
 
 
         self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})
@@ -393,7 +392,7 @@ class CustomAnim(Animation):
         for k, v in enumerate(currents_s):
             rgb = hex_to_rgb((cl['a'], cl['b'], cl['c'])[k % 3])
 
-            f = abs(currents_s[k % 3]) if self.dynamic_colors.get() else 1.0
+            f = abs(currents_s[k % 3]) if self.dynamic_colors else 1.0
             colors_s.append(rgb_to_hex(scale_hsl(rgb, hue=1, sat=(1-f)*0.05+0.95, lum=sqrt(f) * 1.2)))
 
         # stator

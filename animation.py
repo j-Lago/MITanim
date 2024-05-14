@@ -1,3 +1,4 @@
+import tkinter
 from abc import ABC, abstractmethod
 from NormCanvas import NormCanvas
 from time import time
@@ -39,6 +40,9 @@ class Animation(ABC):
     @abstractmethod
     def refresh(self, t: float, dt: float, frame_count: int):
         pass
+
+
+
 
 
 
