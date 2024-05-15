@@ -8,7 +8,7 @@ class GraphicVec2(Primitive):
                  real: float, imag: float,
                  canvas: NormCanvas,
                  origin: tuple | complex = complex(0.0, 0.0),
-                 arrow_fade_threshold=0.25,
+                 arrow_fade_threshold=0.1,
                  arrowshape=(25, 28, 8),
                  stroke='#000000',
                  width=8,
@@ -16,51 +16,68 @@ class GraphicVec2(Primitive):
 
 
         vec = complex(real, imag)
-
         origin = origin if isinstance(origin, complex) else complex(*origin)
 
-        if line_kwargs.pop('transforms', None):
-            raise ValueError("'GraphicVec2' não possui o parâmetro 'transforms'")
+        # if line_kwargs.pop('transforms', None):
+        #     raise ValueError("'GraphicVec2' não possui o parâmetro 'transforms'")
 
         coords = (origin.real, origin.imag, origin.real+vec.real, origin.imag+vec.imag)
         super().__init__(canvas, shape='line', coords=coords, width=width, arrowshape=arrowshape, arrow='last', stroke=stroke, **line_kwargs, dont_draw=True)
 
-        self.vec = vec
-        self.origin = origin
+        # self.vec = vec
+        # self.origin = origin
         self.arrow_fade_threshold = arrow_fade_threshold
-        self._arrowshape = arrowshape
+        self._arrowshape_init = arrowshape
+
+    def to_complex(self):
+        real = self.coords[2] - self.coords[0]
+        imag = self.coords[3] - self.coords[1]
+        return complex(real, imag)
+
+    def from_complex(self, vec: complex, center=complex(0.0, 0.0)):
+        self.coords = (center.real, center.imag, center.real+vec.real, center.imag+vec.imag)
 
     # @property
     # def _handle(self):
     #     return self.line._handle
 
-    @property
-    def coords(self):
-        return tuple((self.origin.real, self.origin.imag, self.vec.real, self.vec.imag))
+    # @property
+    # def coords(self):
+    #     return tuple((self.origin.real, self.origin.imag, self.vec.real, self.vec.imag))
 
-    @coords.setter
-    def coords(self, coords):
-        match len(coords):
-            case 2:
-                self.vec = complex(coords[0], coords[1])
-            case 4:
-                self.origin = complex(coords[0], coords[1])
-                self.vec = complex(coords[2]-coords[0], coords[3]-coords[1])
-            case _: raise ValueError(f"coord' deve ser 2 (x, y) ou 4 (x0, y0, x, y) elementos" )
+    # @coords.setter
+    # def coords(self, coords):
+    #     match len(coords):
+    #         case 2:
+    #             self.vec = complex(coords[0], coords[1])
+    #         case 4:
+    #             self.origin = complex(coords[0], coords[1])
+    #             self.vec = complex(coords[2]-coords[0], coords[3]-coords[1])
+    #         case _: raise ValueError(f"coord' deve ser 2 (x, y) ou 4 (x0, y0, x, y) elementos" )
+    #
+    #     self._canvas.coords(self._handle, self.denorm_coords())
 
-        self._canvas.coords(self._handle, self.denorm_coords())
 
 
+    def draw(self,**kwargs):
 
-    def draw(self, **kwargs):
-        self.coords = (self.origin.real, self.origin.imag, self.origin.real+self.vec.real, self.origin.imag+self.vec.imag)
+        dx = self.coords[2] - self.coords[0]
+        dy = self.coords[3] - self.coords[1]
+        amp = abs(sqrt(dx**2 + dy**2))
 
-        if abs(abs(self.vec)) < self.arrow_fade_threshold:
-            arrowshape = tuple(float(e * abs(self.vec) / self.arrow_fade_threshold) for e in self._arrowshape)
-            self._canvas.itemconfig(self._handle, arrowshape=arrowshape)
+        # self._canvas.coords(self._handle, self.denorm_coords())
+        # self._canvas.itemconfig(self._handle, **kwargs)
 
-        self._canvas.coords(self._handle, self.denorm_coords())
-        self._canvas.itemconfig(self._handle, **kwargs)
+        if amp < self.arrow_fade_threshold:
+            arrowshape = tuple(int(e * amp / self.arrow_fade_threshold) for e in self._arrowshape_init)
+        else:
+            arrowshape = self._arrowshape_init
+
+        self._canvas.itemconfig(self._handle, arrowshape=arrowshape)
+
+        super().draw()
+
+
 
 
 

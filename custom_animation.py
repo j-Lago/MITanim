@@ -24,12 +24,21 @@ class CustomAnim(Animation):
         self.dc_filter_buffer = deque(maxlen=100)
 
         self.t = 0.0
-        self.ths = 0.0
-        self.thr = 0.0
-        self.the = 0.0
+        self.ths = 0.0     # angulo mecanico do estador
+        self.thr = 0.0     # angulo mecânico do rotor
+        # self.thir = 0.0    # fase da corrente do rotor
+        self.thg = 0.0     # fase das tensões de alimentação
         self.fs = 0.0
-        self.fr = 55
         self.fg = 60
+        self.s = 0.05
+
+        self.Ns_Nr = 100 #relação entre n espiras do estator e do rotor
+
+        self._fs_inc = 0.0   # incrementos a ser aplicado no próximo frame
+        self._s_inc = 0.0    # incrementos a ser aplicado no próximo frame
+        self._fg_inc = 0.0   # incrementos a ser aplicado no próximo frame
+
+        self.fr = (1-self.s) * self.fg
         self.time_factor = 140
 
         self.V1nom = 380.0
@@ -38,7 +47,7 @@ class CustomAnim(Animation):
 
 
         self.display_mu = CircularDict({'Hz': 1.0, 'rad/s': 2*pi, 'rpm': 60})  # 'um': fator de conversão
-        self.display_mit_ax0 = CircularDict({'V1': 500, 'I2': 12, 'I1': 12})   # 'atributo': ylim
+        self.display_mit_ax0 = CircularDict({'V1': 500, 'Ir': 500, 'I1': 12, 'Im': 1})   # 'atributo': ylim
         self.display_mit_ax1 = CircularDict({'I2': 1, 'I1': 1, 'nan': 0})      # value não utilizado
         self.esp_front_opacity = CircularDict({'': 0, 'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
         self.dynamic_colors = BoolVar(True)
@@ -67,16 +76,16 @@ class CustomAnim(Animation):
         self.plt_t.extend(t)
 
         Zbase = 1
-        self.mit = MITsim(R1=14.7000 * Zbase,
-                     X1=14.9862 * Zbase,
-                     R2=10.5445 * Zbase,
-                     X2=22.4793 * Zbase,
-                     Rc=1.6261e+03 * Zbase,
-                     Xm=419.2075 * Zbase,
-                     V1=380.0,
-                     f0=60.0,
-                     p=2
-                     )
+        self.mit = MITsim(R1=14.7000 * Zbase * 0.0,
+                          X1=14.9862 * Zbase * 0.0,
+                          R2=10.5445 * Zbase * 0.7,
+                          X2=22.4793 * Zbase * 1.5,
+                          Rc=1.6261e+03 * Zbase,
+                          Xm=419.2075 * Zbase,
+                          V1=380.0,
+                          fnom=60.0,
+                          p=2
+                          )
 
         wmax = (2 * pi * 70) * 1.2
         self.mit.V1 = 1.0 * self.V1nom
@@ -138,7 +147,7 @@ class CustomAnim(Animation):
 
 
         self.create_original_draw()
-        self.draw_all()
+        self.draw_all(consolidate_transforms_to_original=True)
         self.binds()
 
 
@@ -245,14 +254,17 @@ class CustomAnim(Animation):
         for i, p in enumerate(self.prims['extra_s']['esp_front']):
             p.fill = cl[('a', 'b', 'c')[i // self.slots_ns_alt % 3]]
 
-        self.prims['stator']['vec'] = [
-            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['a']),
-            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['b']),
-            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['c']),
-            GraphicVec2(1.0, 0.0, self.canvas, stroke=cl['s']),
+        self.prims['rotor']['vec'] = [
+            *(GraphicVec2(0.4, 0.0, self.canvas, stroke=cl[('x', 'y', 'z', 'r')[i]], transforms=(rotate, 2 * pi / 3 * i))
+              for i in range(4))
         ]
-        for i, prims in enumerate(self.prims['stator']['vec']):
-            prims.rotate(i*2*pi/3)
+
+        self.prims['stator']['vec'] = [
+            *(GraphicVec2(0.4, 0.0, self.canvas, stroke=cl[('a', 'b', 'c', 's')[i]], transforms=(rotate, 2*pi/3 * i))
+              for i in range(4))
+        ]
+
+        # self.prims['stator']['vec'][0].scale(1.2)
 
         self.create_primitive('circle', (0.0, 0.0, 0.01), fill=cl['airgap'], stroke=cl['outline'])
 
@@ -290,12 +302,13 @@ class CustomAnim(Animation):
 
         # animation clock
         dt /= self.time_factor
+        self.fr = (1.0 - self.s) * self.fg
 
         # todo: deletar esse valor e usar resultado da sim
-        currents_s = tuple(sin(self.the - pi / 2 - 2 * pi / 3 * k) for k in range(3))
+        currents_s = tuple(sin(self.thg - pi / 2 - 2 * pi / 3 * k) for k in range(3))
 
         # plot resample
-        m = max(min(self.fg / 60, 1.0), -1.0)
+        m = self.mit.m_comp(compensate_Z1 = self.mit.R1 != 0.0 )
 
         #Tind vs wr curve
         wmax = 4600
@@ -322,10 +335,17 @@ class CustomAnim(Animation):
         except ZeroDivisionError:
             s = float('nan')
 
-        self.mit.V1 = m * self.V1nom
+        m0 = 0.008
+        self.mit.V1 = max(m, m0) * self.V1nom
         self.mit.wr = self.fr * 2 * pi * 2 / self.mit.p
         self.mit.f = self.fg
         self.mit.solve()
+
+        th_er = (self.thg) - self.thr - pi
+        Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
+        I2_abc = tuple(abs(self.mit.I2) * sin(th_er + phase(self.mit.I2) - i*2*pi/3) for i in range(3))
+
+
         self.plt_lines['I1_marker'].set_ydata((abs(self.mit[self.display_mit_ax1.current_key]), abs(self.mit[self.display_mit_ax1.current_key])))
         self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind, self.mit.Tind))
         nr = self.mit.wr * 30.0 / pi
@@ -365,10 +385,22 @@ class CustomAnim(Animation):
 
             # plot ax0
             self.plt_t.append(self.t)
+
+
+            if self.display_mit_ax0.current_key == 'Ir':
+                key = 'I2'
+                th = th_er
+                amp = abs(self.mit[key]) * self.Ns_Nr
+            else:
+                key = self.display_mit_ax0.current_key
+                th = self.thg
+                amp = abs(self.mit[key])
+
+            phi = phase(self.mit[key])
+
             for phase_id in range(3):
-                amp = abs(self.mit[self.display_mit_ax0.current_key])
-                phi = phase(self.mit[self.display_mit_ax0.current_key])
-                ax0_curves = tuple(amp*sin(self.the - pi / 2 - 2 * pi / 3 * k + phi) for k in range(3))
+
+                ax0_curves = tuple(amp * sin(th + phi - k * 2 * pi / 3) for k in range(3))
                 self.plt_vgs[phase_id].append(ax0_curves[phase_id])
 
         redraw_plt = frame_count % 2 == 0
@@ -406,6 +438,7 @@ class CustomAnim(Animation):
                 for prims in self.prims[part][group]:
                     prims.rotate(self.ths)
 
+
         # TODO: restaurar
         for k, prims in enumerate(self.prims['stator']['esp']):
             prims.fill = colors_s[k // self.slots_ns_alt % 3]
@@ -417,29 +450,56 @@ class CustomAnim(Animation):
         for part in ['rotor', 'extra_r']:
             for group in self.prims[part]:
                 for prims in self.prims[part][group]:
-                    prims.rotate(self.thr)
+                    prims.rotate(self.thr+self.ths)
+
+
+
+        # xyz flux animation
+        # groups = ['flux_x', 'flux_y', 'flux_z']
+        # tip = assets['quarter_flux']['arrowshape']
+        # max_width = 6
+        for phase_id in range(3):
+            s = I2_abc[phase_id]
+            self.prims['rotor']['vec'][phase_id].scale(s * 0.4)
+            # if self.prims['extra_s'][groups[phase_id]][0].visible:
+            #     for prims in *self.prims['extra_s'][groups[phase_id]],:
+            #         prims.arrowshape = (tip[0] * s, tip[1] * s, tip[2] * fabs(s))
+            #         prims.width = max_width * fabs(s / abs(self.mit.Im))
+            #         prims.fill = colors_s[phase_id]
+
+        self.prims['rotor']['vec'][3].from_complex(self.prims['rotor']['vec'][0].to_complex() +
+                                                   self.prims['rotor']['vec'][1].to_complex() +
+                                                   self.prims['rotor']['vec'][2].to_complex()
+                                                   )
+
 
         # abc flux animation
+
+
+
         groups = ['flux_a', 'flux_b', 'flux_c']
         tip = assets['quarter_flux']['arrowshape']
         max_width = 6
         for phase_id in range(3):
-            s = currents_s[phase_id]
+            s = Im_abc[phase_id]
+            self.prims['stator']['vec'][phase_id].scale(s * 1.48)
             if self.prims['extra_s'][groups[phase_id]][0].visible:
                 for prims in *self.prims['extra_s'][groups[phase_id]],:
                     prims.arrowshape = (tip[0] * s, tip[1] * s, tip[2] * fabs(s))
-                    prims.width = max_width * fabs(s)
+                    prims.width = max_width * fabs(s / abs(self.mit.Im))
                     prims.fill = colors_s[phase_id]
 
-            self.prims['stator']['vec'][phase_id].vec = rect(s * 0.4, phase_id * 2 * pi / 3 + self.ths)
-        self.prims['stator']['vec'][3].vec = self.prims['stator']['vec'][0].vec + \
-                                             self.prims['stator']['vec'][1].vec + \
-                                             self.prims['stator']['vec'][2].vec
+        self.prims['stator']['vec'][3].from_complex(self.prims['stator']['vec'][0].to_complex() +
+                                                    self.prims['stator']['vec'][1].to_complex() +
+                                                    self.prims['stator']['vec'][2].to_complex()
+                                                    )
 
-        # stator flux animation
         if self.prims['extra_s']['flux_s'][0].visible:
             for p in *self.prims['extra_s']['flux_s'],:
-                p.rotate(self.the-pi)
+                p.rotate(phase(self.prims['stator']['vec'][3].to_complex()))
+
+
+        # self.prims['stator']['vec'][0].coords = (0,0,-1,-1)
 
         self.draw_all()
 
@@ -448,10 +508,23 @@ class CustomAnim(Animation):
                 fig.canvas.draw()
                 fig.canvas.flush_events()
 
+        if self._fs_inc:
+            self.fs += self._fs_inc
+            self._fs_inc = 0.0
+
+        if self._fg_inc:
+            self.fg += self._fg_inc
+            self._fg_inc = 0.0
+
+        if self._s_inc:
+            self.s += self._s_inc
+            self.fr = (1.0-self.s) * self.fg
+            self._s_inc = 0.0
+
         if self.run:
-            self.the = (self.the + dt * self.fg * 2 * pi) % (2 * pi)
-            self.thr = (self.thr + dt * self.fr * 2 * pi) % (2 * pi)
+            self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
             self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
+            self.thr = (self.thr + dt * self.fr * 2 * pi) % (2 * pi)
             self.t += dt
 
         self.update_info()
@@ -475,12 +548,12 @@ class CustomAnim(Animation):
         for um in self.display_mu:
             um_max_len = max(len(um), um_max_len)
 
-        self.widgets['w_stator']   .config(text=f"  vel. estator: {self.fs*um_factor  :>5.0f} {um_name}{' '*(um_max_len-len(um_name))}")
+        self.widgets['w_stator']   .config(text=f"  vel. estator: {self.fs*um_factor  :>5.1f} {um_name}{' '*(um_max_len-len(um_name))}")
         self.widgets['w_grid'].config(
-            text=f"    vel. alim.: {self.fg * um_factor_g:>5.0f} {um_name_g}{' ' * (um_max_len - len(um_name_g))}")
-        self.widgets['w_rotor']    .config(text=f"    vel. rotor: {self.fr*um_factor  :>5.0f} {um_name}{' '*(um_max_len-len(um_name))}")
+            text=f"    vel. alim.: {self.fg * um_factor_g:>5.1f} {um_name_g}{' ' * (um_max_len - len(um_name_g))}")
+        self.widgets['w_rotor']    .config(text=f"    vel. rotor: {self.fr*um_factor  :>5.1f} {um_name}{' '*(um_max_len-len(um_name))}")
         self.widgets['slip'].config(text=f"         slip: {self.mit.s  :>6.2f} pu{' ' * (um_max_len)}")
-        self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.0f} x")
+        self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.1f} x")
         self.widgets['frame_delay'].config(text=f"   frame delay: {self.frame_delay:>5} ms")
 
     def update_esp_and_cutout_visibility(self):
@@ -529,12 +602,12 @@ class CustomAnim(Animation):
 
         def inc_value(var_name: Literal['ws', 'wr', 'we'],  increment: float,  v_min= -9.9, v_max= 9.9):
             match var_name:
-                case 'ws':
-                    self.fs = clip(self.fs + increment, v_min, v_max)
-                case 'wr':
-                    self.fr = clip(self.fr + increment, v_min, v_max)
-                case 'we':
-                    self.fg = clip(self.fg + increment, v_min, v_max)
+                case 'fs':
+                    self._fs_inc = clip(self.fs + increment, v_min, v_max) - self.fs
+                case 's':
+                    self._s_inc = clip(self.s + increment, v_min, v_max) - self.s
+                case 'fg':
+                    self._fg_inc = clip(self.fg + increment, v_min, v_max) - self.fg
                 case 'delay':
                     self.frame_delay = int(clip(self.frame_delay + increment, v_min, v_max))
                 case 'time_factor':
@@ -550,7 +623,7 @@ class CustomAnim(Animation):
         def reset_time(reset_and_stop=False):
             self._t_init = time.time()
             self._t_start = 0.0
-            self.the = 0.0
+            self.thg = 0.0
             self.thr = 0.0
             self.ths = 0.0
 
@@ -648,42 +721,18 @@ class CustomAnim(Animation):
                     for k, prims in enumerate(self.prims[part][group]):
                         self.prims[part][group][k].stipple = self.esp_front_opacity.current_key
 
-            # parts = ['extra_s', 'extra_r']
-            # groups = ['esp_front']
-            # n = {'stator': self.slots_ns, 'rotor': self.slots_nr, 'extra_s': self.slots_ns, 'extra_r': self.slots_nr}
-            # if self.slots_ns == 1:
-            #     for part in parts:
-            #         for group in groups:
-            #             for k, prims in enumerate(self.prims[part][group]):
-            #                 if ((k + 1) // n[part] % 3) != 2:
-            #                     self.prims[part][group][k].visible = False
-            #                 else:
-            #                     self.prims[part][group][k].visible = visibility
-            #                     self.prims[part][group][k].stipple = stipple
-            # else:
-            #     for part in parts:
-            #         for group in groups:
-            #             for k, prims in enumerate(self.prims[part][group]):
-            #                 self.prims[part][group][k].visible = visibility
-            #                 self.prims[part][group][k].stipple = stipple
-            #
-            # self.update_esp_and_cutout_visibility()
 
 
-        self.widgets['Tcarga'].configure(variable=self.dynamic_colors)
-        # self.widgets['Tcarga'].configure(command=checkbutton_change_Tcarga)
-
-        self.canvas.window.bind('o', lambda event: change_esp_front_opacity())
-
-
-        dw_inc = 1
+        dw_inc = 0.83333333333333333333333333
         f_max = 70
-        self.canvas.window.bind('+', lambda event: inc_value('ws', dw_inc, -f_max, f_max))
-        self.canvas.window.bind('-', lambda event: inc_value('ws', -dw_inc, -f_max, f_max))
-        self.canvas.window.bind('<Right>', lambda event: inc_value('wr', dw_inc, -f_max, f_max))
-        self.canvas.window.bind('<Left>',  lambda event: inc_value('wr', -dw_inc, -f_max, f_max))
-        self.canvas.window.bind('<Up>',    lambda event: inc_value('we', dw_inc, -f_max, f_max))
-        self.canvas.window.bind('<Down>',  lambda event: inc_value('we', -dw_inc, -f_max, f_max))
+        self.widgets['Tcarga'].configure(variable=self.dynamic_colors)
+        self.canvas.window.bind('o', lambda event: change_esp_front_opacity())
+        self.canvas.window.bind('+', lambda event: inc_value('fs', 1, -f_max, f_max))
+        self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))
+        self.canvas.window.bind('<Right>', lambda event: inc_value('s', -0.01, -0.2, 2.2))
+        self.canvas.window.bind('<Left>',  lambda event: inc_value('s', 0.01, -0.2, 2.2))
+        self.canvas.window.bind('<Up>',    lambda event: inc_value('fg', dw_inc, -f_max, f_max))
+        self.canvas.window.bind('<Down>',  lambda event: inc_value('fg', -dw_inc, -f_max, f_max))
         self.canvas.window.bind('n', lambda event: change_nesp())
 
         self.canvas.window.bind('.', lambda event: inc_value('time_factor', self.time_factor*.2, 32.45273575943723503208293147346, 1492.992))

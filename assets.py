@@ -10,6 +10,7 @@ cl = {'bg': '#ffffff',
           'x': '#cc6633',
           'y': '#3366cc',
           'z': '#33cc66',
+          'r': '#8741a1',
           'Fe': '#cccccc',
           'shaft': '#777777',
           's': '#773191',
@@ -47,7 +48,7 @@ assets = {
     'keyway':                {'shape': 'polygon',   'fill': cl['Fe'],     'stroke': '',            'width': w, 'coords': (-k[0], k[1]+s, -k[0], -k[1]+s, k[0], -k[1]+s, k[0], k[1]+s)},
     'keyway_outline':        {'shape': 'line',      'fill': '',           'stroke': cl['outline'], 'width': w, 'coords': (-k[0], s+ko, -k[0], -k[1]+s, k[0], -k[1]+s, k[0], s+ko)},
     'mount':                 {'shape': 'polygon',   'fill': cl['Fe'],     'stroke': cl['outline'], 'width': w, 'coords': (.52, -.65, .7, -.98, .35, -.98, .25, -.7)},
-    'vec':                   {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': w, 'coords': (0.0, 0.0, 0.65, 0.0)},
+    'vec':                   {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': w, 'joinstyle': 'round', 'capstyle': 'round', 'arrow': 'last', 'arrowshape': (18, 20, 6), 'coords': (0.0, 0.0, 0.4, 0.0)},
 }
 
 

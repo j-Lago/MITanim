@@ -4,13 +4,14 @@ import numpy as np
 import warnings
 
 class MITsim:
-    Tind: float
-    Pconv: float
+    def __init__(self, R1: float, X1: float, R2: float, X2: float, Rc: float, Xm: float, p: int = 2,
+                 V1: float = 1.0, fnom: float = 60.0, fcomp0: float = 10.0, mcomp0: float = 0.017):
 
-    def __init__(self, R1:float, X1:float, R2:float, X2:float, Rc:float, Xm:float, V1:float=1.0, p:int=2, f0:float=60.0):
+        self.mcomp0 = mcomp0
+        self.fcomp0 = fcomp0
 
         self.p = p
-        self.f0 = f0
+        self.fnom = fnom
         self.R1 = R1
         self.X1 = X1
         self.R2 = R2
@@ -20,7 +21,7 @@ class MITsim:
         self.V1 = complex(V1 + 0.0)
         self.wr = 0.0
 
-        self.f = self.f0
+        self.f = self.fnom
         self.I1 = complex(0.0 + 0.0) * 3
         self.E  = complex(0.0 + 0.0) * 3
         # self.Ic = complex(0.0 + 0.0) * 3
@@ -42,9 +43,9 @@ class MITsim:
         s = self.s
 
 
-        X1 = self.X1 * self.f / self.f0
-        X2 = self.X2 * self.f / self.f0
-        Xm = self.Xm * self.f / self.f0
+        X1 = self.X1 * self.f / self.fnom
+        X2 = self.X2 * self.f / self.fnom
+        Xm = self.Xm * self.f / self.fnom
 
         Rconv = self.R2 * (1.0 - s) / s if s != 0.0 else 1e18
 
@@ -62,10 +63,11 @@ class MITsim:
 
         self.E = self.I1 * Z02
         # self.Ic = self.E / self.Rc
+        last_Im = self.Im
         try:
             self.Im = self.E / complex(0, Xm)
         except ZeroDivisionError:
-            self.Im = float('nan')
+            self.Im = last_Im
 
 
         self.I2 = self.E / Z2
@@ -104,5 +106,24 @@ class MITsim:
             return self.__dict__[key]
         else:
             raise ValueError(f"MITsim não possui o atributo '{key}'.")
+
+
+    def m_comp(self, compensate_Z1=True, clip=True):
+        """
+        Modulation index compensado pela frequência com saturação e step inicial
+        """
+
+        m = abs(self.f) / self.fnom
+
+        if compensate_Z1:
+            mcomp = self.mcomp0 + (self.fcomp0 / self.fnom - self.mcomp0) / self.fcomp0 * abs(self.f)
+            m = max(m, mcomp)
+
+        if clip:
+            m = min(m, 1)
+
+        return m
+
+
 
 

@@ -25,7 +25,7 @@ def scale(coords: Coords, factor: Numeric | Point, center: Point = (0, 0)) -> Co
         return input_type(((coords[0]-center[0])*factor+center[0], (coords[1]-center[1])*factor+center[1], coords[2]*factor))
     else:
         if isinstance(factor, float | int):
-            print(factor)
+            # print(factor)
             factor = (factor, factor)
         return input_type(factor[i_xy := i % 2] * (v-center[i % 2]) + center[i_xy] for i, v in enumerate(coords))
 
