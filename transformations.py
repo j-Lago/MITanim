@@ -125,3 +125,31 @@ def hex_to_rgb(hex: str) -> tuple[float, ...]:
     hex_to_rgb('#ff8833') -> (0.49, 1.0, 0.0)
     """
     return tuple(int(hex[i:i+2], 16)/255 for i in range(1, len(hex)-1, 2))
+
+
+class CircularDict(dict):
+    def __init__(self, *args):
+        dict()
+        super().__init__(*args)
+        keys = list(self.keys())
+        self._current_key = keys[0]
+
+    @property
+    def current_key(self):
+        return self._current_key
+
+    @current_key.setter
+    def current_key(self, value):
+        if value not in list(self.keys()):
+            raise ValueError(f"a 'key' fornecida não faz parte do dicionário. São chaves válidas {list(self.keys())}")
+        self._current_key = value
+
+
+    @property
+    def current_value(self):
+        return self[self._current_key]
+
+    def __next__(self):
+        keys = list(self.keys())
+        self._current_key = keys[(keys.index(self._current_key) + 1) % len(keys)]
+        return self._current_key

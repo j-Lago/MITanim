@@ -1,6 +1,8 @@
+from GSanim import CustomAnim
+# from custom_animation import CustomAnim
+
 import tkinter as tk
 from NormCanvas import NormCanvas
-from custom_animation import CustomAnim
 from assets import cl
 import numpy as np
 from math import sin, cos, sqrt, pi, atan2, fabs
@@ -20,8 +22,8 @@ def main():
     window.configure(background=cl['bg'])
     canvas = NormCanvas(window, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
 
-    fig0, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=100)
-    fig1, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=100)
+    fig0, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
+    fig1, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
 
 
     fonts = {

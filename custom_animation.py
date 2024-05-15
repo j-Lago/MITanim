@@ -5,7 +5,7 @@ from tkinter import messagebox
 from math import sin, cos, pi, atan2, sqrt, fabs
 from NormCanvas import NormCanvas, BoolVar
 from primitive import Primitive
-from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip
+from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip, CircularDict
 import time
 from assets import assets, cl, binds_message
 from animation import Animation
@@ -271,7 +271,7 @@ class CustomAnim(Animation):
 
         self.create_primitive('circle', (0.0, 0.0, 0.01), fill=cl['airgap'], stroke=cl['outline'])
 
-        self.update_esp_and_cutout_visibility()
+        self.update_esp_and_cutoutvisible()
 
 
 
@@ -561,7 +561,7 @@ class CustomAnim(Animation):
         self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.1f} x")
         self.widgets['frame_delay'].config(text=f"   frame delay: {self.frame_delay:>5} ms")
 
-    def update_esp_and_cutout_visibility(self):
+    def update_esp_and_cutoutvisible(self):
         parts = ['stator', 'rotor']
         groups = ['esp', 'cutout', 'cutout_outline']
         n = {'stator': self.slots_ns, 'rotor': self.slots_nr, 'extra_s': self.slots_ns, 'extra_r': self.slots_nr}
@@ -653,12 +653,12 @@ class CustomAnim(Animation):
                     next(self.display_mit_ax1)
                 case _: raise ValueError('valor inválido para ax')
 
-        def toggle_visibility(parts: Literal['stator', 'rotor'], groups: str | None = None):
+        def togglevisible(parts: Literal['stator', 'rotor'], groups: str | None = None):
 
             # todo: naão funciona 'e'->'n'->'e'
             # if parts in ['extra_s', 'extra_r']:
             #     if groups in ['esp_front']:
-            #         update_esp_and_cutout_visibility()
+            #         update_esp_and_cutoutvisible()
             #         return
 
 
@@ -671,22 +671,22 @@ class CustomAnim(Animation):
 
             # print(parts,groups )
 
-            first_visibility = False
+            firstvisible = False
             for part in parts:
                 if groups:
                     for group in groups:
                         for p in self.prims[part][group]:
                             if p.visible:
-                                first_visibility = True or first_visibility
+                                firstvisible = True or firstvisible
                 else:
                     for group in self.prims[part]:
                         for p in self.prims[part][group]:
                             if p.visible:
-                                first_visibility = True or first_visibility
+                                firstvisible = True or firstvisible
 
-                # print(first_visibility)
+                # print(firstvisible)
 
-            # first_visibility = None
+            # firstvisible = None
             # if isinstance(parts, str):
             #     parts = [parts]
             for part in parts:
@@ -695,17 +695,17 @@ class CustomAnim(Animation):
                         # groups = [groups]
                     for group in groups:
                         for p in self.prims[part][group]:
-                            # if first_visibility == None:
-                                # first_visibility = not p.visible
-                            p.visible = not first_visibility
+                            # if firstvisible == None:
+                                # firstvisible = not p.visible
+                            p.visible = not firstvisible
                 else:
                     for group in self.prims[part]:
                         for p in self.prims[part][group]:
-                            # if first_visibility == None:
-                            #     first_visibility = not p.visible
-                            p.visible = not first_visibility
+                            # if firstvisible == None:
+                            #     firstvisible = not p.visible
+                            p.visible = not firstvisible
 
-            self.update_esp_and_cutout_visibility()
+            self.update_esp_and_cutoutvisible()
 
 
 
@@ -714,7 +714,7 @@ class CustomAnim(Animation):
             self.slots_ns = self.slots_ns_alt if self.slots_ns == 1 else 1
             self.slots_nr = self.slots_nr_alt if self.slots_nr == 1 else 1
             # print(self.ns, self.nr, )
-            self.update_esp_and_cutout_visibility()
+            self.update_esp_and_cutoutvisible()
 
         def change_esp_front_opacity():
             next(self.esp_front_opacity)
@@ -757,44 +757,15 @@ class CustomAnim(Animation):
         self.canvas.window.bind('<F1>', lambda event: show_binds())
         self.canvas.window.bind('<Escape>', lambda event: reset_time(reset_and_stop=True))
         self.canvas.window.bind('<0>',     lambda event: reset_time())
-        self.canvas.window.bind('r',       lambda event: toggle_visibility('rotor'))
-        self.canvas.window.bind('s',       lambda event: toggle_visibility('stator'))
-        self.canvas.window.bind('[', lambda event: toggle_visibility('stator', 'axis'))
-        self.canvas.window.bind(']', lambda event: toggle_visibility('rotor', 'axis'))
-        self.canvas.window.bind('f',       lambda event: toggle_visibility('extra_s', 'flux_s'))
-        self.canvas.window.bind('a',       lambda event: toggle_visibility('extra_s', 'flux_a'))
-        self.canvas.window.bind('b',       lambda event: toggle_visibility('extra_s', 'flux_b'))
-        self.canvas.window.bind('c',       lambda event: toggle_visibility('extra_s', 'flux_c'))
-        self.canvas.window.bind('e',       lambda event: toggle_visibility('extra_s', 'esp_front'))
-        self.canvas.window.bind('x',       lambda event: toggle_visibility(['extra_s', 'extra_r']))
-        self.canvas.window.bind('g',       lambda event: toggle_visibility('extra_r', 'esp_front'))
-
-class CircularDict(dict):
-    def __init__(self, *args):
-        dict()
-        super().__init__(*args)
-        keys = list(self.keys())
-        self._current_key = keys[0]
-
-    @property
-    def current_key(self):
-        return self._current_key
-
-    @current_key.setter
-    def current_key(self, value):
-        if value not in list(self.keys()):
-            raise ValueError(f"a 'key' fornecida não faz parte do dicionário. São chaves válidas {list(self.keys())}")
-        self._current_key = value
-
-
-    @property
-    def current_value(self):
-        return self[self._current_key]
-
-    def __next__(self):
-        keys = list(self.keys())
-        self._current_key = keys[(keys.index(self._current_key) + 1) % len(keys)]
-        return self._current_key
-
-
+        self.canvas.window.bind('r',       lambda event: togglevisible('rotor'))
+        self.canvas.window.bind('s',       lambda event: togglevisible('stator'))
+        self.canvas.window.bind('[', lambda event: togglevisible('stator', 'axis'))
+        self.canvas.window.bind(']', lambda event: togglevisible('rotor', 'axis'))
+        self.canvas.window.bind('f',       lambda event: togglevisible('extra_s', 'flux_s'))
+        self.canvas.window.bind('a',       lambda event: togglevisible('extra_s', 'flux_a'))
+        self.canvas.window.bind('b',       lambda event: togglevisible('extra_s', 'flux_b'))
+        self.canvas.window.bind('c',       lambda event: togglevisible('extra_s', 'flux_c'))
+        self.canvas.window.bind('e',       lambda event: togglevisible('extra_s', 'esp_front'))
+        self.canvas.window.bind('x',       lambda event: togglevisible(['extra_s', 'extra_r']))
+        self.canvas.window.bind('g',       lambda event: togglevisible('extra_r', 'esp_front'))
 

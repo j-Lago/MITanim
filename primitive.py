@@ -1,23 +1,35 @@
+from __future__ import annotations
 from NormCanvas import NormCanvas
 from transformations import Coords, Point, Numeric, denorm_coords
 from math import sqrt
 import transformations
-from typing import Literal
+from typing import Literal, Any
 from copy import copy, deepcopy
 
 from types import FunctionType
 
 
+
+def recursive_parent_visible(obj, visiblitity):
+    if isinstance(obj, PrimitivesGroup):
+        obj._parent_visibility = visiblitity
+        for child in obj.nodes:
+            recursive_parent_visible(child, visiblitity)
+    else:
+        obj.visible = visiblitity
+
 class Primitive:
     def __init__(self, canvas: NormCanvas,
                  shape: Literal['line', 'polygon', 'rectangle', 'square', 'circle', 'oval', 'arc'],
                  coords: Coords,
-                 transforms: tuple[FunctionType, tuple] | list[tuple[FunctionType, tuple]] | tuple[tuple[FunctionType, tuple]] | None = None,
+                 transforms: tuple[FunctionType, tuple] | list[tuple[FunctionType, tuple]] | tuple[tuple[FunctionType, tuple]] | Any | None = None,
+                 name='unnamed',
                  **kwargs):
         """
         """
         self._canvas = canvas
         self._handle = None
+        self.name = name
 
 
         if transforms:
@@ -172,6 +184,7 @@ class Primitive:
 
     def delete(self):
         self._canvas.delete(self._handle)
+        print(f'primitive {self._handle} deleted')
 
     def draw(self,
              reset_transforms_to_original_after_draw: bool = True,
@@ -203,7 +216,152 @@ class Primitive:
 
 
 class PrimitivesGroup:
-    def __init__(self):
-        pass
+    def __init__(self, name: str, prims: list[Primitive] | PrimitivesGroup | list[PrimitivesGroup] = [], visibility: bool = True):
+        self.name = name
+        self.nodes = prims if isinstance(prims, list) else [prims]
+        self._visibility = True  # use .visible para propagar aos subgrupos abaixo
+        self._parent_visibility = True
+
+    def append(self, item):
+        self.nodes.append(item)
+
+    @property
+    def keys(self):
+        return tuple(prim.name for prim in self.nodes)
+
+    def delete_descendant_primitives(self):
+        for node in self.nodes:
+            if isinstance(node, PrimitivesGroup):
+                node.delete_descendant_primitives()
+            else:
+                node.delete()
+                del node
+        self.nodes = []
+
+
+
+
+
+    def __getitem__(self, key):
+
+        if isinstance(key, int):
+            return self.nodes[key]
+
+        if not isinstance(key, str):
+            raise ValueError("'id' deve ser int ou str" )
+
+        for k, prim in enumerate(self.nodes):
+            if prim.name == key:
+                return prim
+
+        raise ValueError(f"o grupo não possui um elemento de nome '{key}'")
+
+    def __setitem__(self, key, value):
+
+        if not isinstance(key, str):
+            raise ValueError("'key' deve do tipo str")
+
+        if key not in self.keys:
+            if isinstance(value, PrimitivesGroup):
+                self.nodes.append(value)
+                return
+
+            if isinstance(value, Primitive):
+                self.nodes.append(PrimitivesGroup(key, [value]))
+                return
+
+            if isinstance(value, list):
+                self.nodes.append(PrimitivesGroup(key, value))
+                return
+
+            raise ValueError("'value' deve do tipo PrimitivesGroup ou Primitive ou list")
+
+        else:
+            if isinstance(value, PrimitivesGroup):
+                self.nodes = [value]
+                return
+
+            if isinstance(value, Primitive):
+                self.nodes = [PrimitivesGroup(key, value)]
+                return
+
+            if isinstance(value, list):
+                self.nodes = value
+                return
+
+            raise ValueError("'value' deve do tipo PrimitivesGroup ou Primitive")
+        raise ValueError('assert')
+
+
+    @property
+    def visible(self):
+        return self._visibility
+
+    @visible.setter
+    def visible(self, visiblitity):
+        self._visibility = visiblitity
+        for child in self.nodes:
+            recursive_parent_visible(child, visiblitity)
+
+    @property
+    def parent_visible(self):
+        return self._parent_visibility
+
+
+    def stroke(self, stroke):
+        for child in self.nodes:
+            child.stroke = stroke
+    stroke = property(None, stroke)
+
+    def fill(self, fill):
+        for child in self.nodes:
+            child.fill = fill
+    fill = property(None, fill)
+
+    def width(self, width):
+        for child in self.nodes:
+            child.width = width
+    width = property(None, width)
+
+    def stipple(self, stipple):
+        for child in self.nodes:
+            child.stipple = stipple
+    stipple = property(None, stipple)
+
+    def draw(self, level=0, parent_visible=True, *args, **kwargs):
+        for child in self.nodes:
+            child.draw(*args, **kwargs)
+
+
+    def print_tree(self, level=0):
+        class style:
+            MAGENTA = '\033[95m'
+            BLUE = '\033[94m'
+            CYAN = '\033[96m'
+            GREEN = '\033[92m'
+            YELLOW = '\033[93m'
+            RED = '\033[91m'
+            GRAY = '\033[0m'
+            BOLD = '\033[1m'
+            RESET = '\033[m'
+            UNDERLINE = '\033[4m'
+            NODE = BLUE
+            LEAF = CYAN
+            iNODE = RED
+            iLEAF = MAGENTA
+
+        class symbol:
+            CROSS = style.RED + '\u2718'
+            CHECK = style.GREEN + '\u2714'
+
+        node_sty = style.NODE if self.visible and self.parent_visible else style.iNODE
+        print(node_sty + f'{'   ' * level}↳ [{level}] {self.name} ({symbol.CHECK if self.parent_visible else symbol.CROSS}{symbol.CHECK if self.visible else symbol.CROSS}' + node_sty + f'):'  + style.RESET)
+        for prim in self.nodes:
+            if isinstance(prim, PrimitivesGroup):
+                prim.print_tree(level=level+1)
+            else:
+                leaf_sty = style.LEAF if prim.visible else style.iLEAF
+                print(node_sty + f'{'   ' * (level + 1)}↳  ' + leaf_sty + f'{prim.name} ({symbol.CHECK if prim.visible else symbol.CROSS}' + leaf_sty + f'): {prim.shape}  ⇣{prim._handle}' + style.RESET)
+
 
 
