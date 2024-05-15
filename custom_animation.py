@@ -14,14 +14,17 @@ from statistics import mean
 from typing import Literal
 from MITsim import MITsim
 from gvec import GraphicVec2
+import matplotlib.pyplot as plt
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
         super().__init__(canvas, frame_delay=0)
 
         self.widgets = widgets
-        self.dt_filter_buffer = deque(maxlen=100)
-        self.dc_filter_buffer = deque(maxlen=100)
+        plt_npt = 100
+        self.dt_filter_buffer = deque(maxlen=plt_npt)
+        self.dc_filter_buffer = deque(maxlen=plt_npt)
+        self.plt_subsample = 3
 
         self.t = 0.0
         self.ths = 0.0     # angulo mecanico do estador
@@ -50,7 +53,7 @@ class CustomAnim(Animation):
         self.display_mit_ax0 = CircularDict({'V1': 500, 'Ir': 500, 'I1': 12, 'Im': 1})   # 'atributo': ylim
         self.display_mit_ax1 = CircularDict({'I2': 1, 'I1': 1, 'nan': 0})      # value não utilizado
         self.esp_front_opacity = CircularDict({'': 0, 'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
-        self.dynamic_colors = BoolVar(True)
+        self.dynamic_colors = BoolVar(False)
 
 
 
@@ -59,7 +62,7 @@ class CustomAnim(Animation):
         marker_size = 8
         markers = ('o', 'o', 'o')
 
-        self.plt_t_range = .05  #(2 * pi * 3) / self.fg
+        self.plt_t_range = 0.016667  #(2 * pi * 3) / self.fg
         axs = (self.widgets['figs'][0].axes[0],
                self.widgets['figs'][1].axes[0],
                )
@@ -403,14 +406,16 @@ class CustomAnim(Animation):
                 ax0_curves = tuple(amp * sin(th + phi - k * 2 * pi / 3) for k in range(3))
                 self.plt_vgs[phase_id].append(ax0_curves[phase_id])
 
-        redraw_plt = frame_count % 2 == 0
+        redraw_plt = frame_count % self.plt_subsample == 0
         phases = ('a', 'b', 'c')
+        plt_cl_keys = ('x', 'y', 'z') if self.display_mit_ax0.current_key == 'Ir' else phases
         if redraw_plt:
-            for k, phase_id in enumerate(phases):
-                self.plt_lines['vg_' + phase_id].set_ydata(self.plt_vgs[k])
-                self.plt_lines['vg_' + phase_id].set_xdata(self.plt_t)
-                self.plt_lines['vg_' + phase_id + '_marker'].set_ydata((self.plt_vgs[k][-1], self.plt_vgs[k][-1]))
-                self.plt_lines['vg_' + phase_id + '_marker'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
+            for k, phase_key in enumerate(phases):
+                self.plt_lines['vg_' + phase_key].set_ydata(self.plt_vgs[k])
+                self.plt_lines['vg_' + phase_key].set_xdata(self.plt_t)
+                self.plt_lines['vg_' + phase_key + '_marker'].set_ydata((self.plt_vgs[k][-1], self.plt_vgs[k][-1]))
+                self.plt_lines['vg_' + phase_key + '_marker'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
+                self.plt_lines['vg_' + phase_key].set_color(cl[plt_cl_keys[k]])
             # self.plt_lines['vg_line'].set_ydata((-2, 2))
             # self.plt_lines['vg_line'].set_xdata((self.plt_t[-1], self.plt_t[-1]))
             pad = 0.1 / self.time_factor
