@@ -184,7 +184,6 @@ class Primitive:
 
     def delete(self):
         self._canvas.delete(self._handle)
-        print(f'primitive {self._handle} deleted')
 
     def draw(self,
              reset_transforms_to_original_after_draw: bool = True,
@@ -228,6 +227,13 @@ class PrimitivesGroup:
     @property
     def keys(self):
         return tuple(prim.name for prim in self.nodes)
+
+    def get_index(self, key):
+        return tuple(id for id, prim in enumerate(self.nodes) if prim.name == key)
+
+    def __del__(self):
+        self.delete_descendant_primitives()
+        del self
 
     def delete_descendant_primitives(self):
         for node in self.nodes:
@@ -278,15 +284,18 @@ class PrimitivesGroup:
 
         else:
             if isinstance(value, PrimitivesGroup):
-                self.nodes = [value]
+                for id in self.get_index(key):
+                    self.nodes[id] = value
                 return
 
             if isinstance(value, Primitive):
-                self.nodes = [PrimitivesGroup(key, value)]
+                for id in self.get_index(key):
+                    self.nodes[id] = PrimitivesGroup(key, [value])
                 return
 
             if isinstance(value, list):
-                self.nodes = value
+                for id in self.get_index(key):
+                    self.nodes[id] = PrimitivesGroup(key, value)
                 return
 
             raise ValueError("'value' deve do tipo PrimitivesGroup ou Primitive")

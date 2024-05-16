@@ -180,8 +180,8 @@ class CustomAnim(Animation):
             canvas = self.canvas
 
             prims['stator']['core']['slots'].delete_descendant_primitives()
-            prims['stator']['core']['coil'].delete_descendant_primitives()
-            prims['stator']['core']['coil_front'].delete_descendant_primitives()
+            prims['stator']['coil'].delete_descendant_primitives()
+            prims['stator']['coil_front'].delete_descendant_primitives()
 
             print('\n')
             self.prims.print_tree()
@@ -192,19 +192,16 @@ class CustomAnim(Animation):
 
             coils_per_phase, phases = self.select_stator_turns.current_value
 
-            # prims['stator']['core']['slots'] = []
-            prims['stator']['core']['slots']['simp'] = create_circular_pattern(canvas,['stator_cutout','stator_cutout_outline'],n=phases*coils_per_phase)
+            prims['stator']['core']['slots'] = create_circular_pattern(canvas,['stator_cutout','stator_cutout_outline'],n=phases*coils_per_phase)
 
-            # prims['stator']['core']['coil'] = []
-            prims['stator']['core']['coil']['simp'] = create_circular_pattern(canvas, ['stator_esp'], n=phases*coils_per_phase)
-            prims['stator']['core']['coil'].stroke = '#ff0000'
-            prims['stator']['core']['coil'].fill = '#00ffaa'
-            prims['stator']['core']['coil'].width = 4
+            prims['stator']['coil'] = create_circular_pattern(canvas, ['stator_esp'], n=phases*coils_per_phase)
+            prims['stator']['coil'].stroke = '#ff0000'
+            prims['stator']['coil'].fill = '#00ffaa'
+            prims['stator']['coil'].width = 4
 
-            # prims['stator']['core']['coil_front'] = []
-            prims['stator']['core']['coil_front']['simp'] = create_circular_pattern(canvas, ['stator_esp_front'], n=phases*coils_per_phase)
-            prims['stator']['core']['coil_front'].stipple = 'gray50'
-            prims['stator']['core']['coil_front'].fill = '#00ffaa'
+            prims['stator']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], n=phases*coils_per_phase)
+            prims['stator']['coil_front'].stipple = 'gray50'
+            prims['stator']['coil_front'].fill = '#00ffaa'
 
             print('\n')
             self.prims.print_tree()

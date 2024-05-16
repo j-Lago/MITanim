@@ -20,14 +20,13 @@ def synchronous_generator_draw(canvas, prims, coils_per_phase, phases=3):
                                                                ['stator_cutout', 'stator_cutout_outline'],
                                                                n=phases*coils_per_phase)
 
-    prims['stator']['core']['coil'] = create_circular_pattern(canvas, ['stator_esp'], n=phases*coils_per_phase)
-    prims['stator']['core']['coil'].stroke = '#ff0000'
-    prims['stator']['core']['coil'].fill = '#00ffaa'
-    prims['stator']['core']['coil'].width = 4
+    prims['stator']['coil'] = create_circular_pattern(canvas, ['stator_esp'], n=phases*coils_per_phase)
+    prims['stator']['coil'].stroke = '#ff0000'
+    prims['stator']['coil'].fill = '#00ffaa'
 
-    prims['stator']['core']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], n=phases*coils_per_phase)
-    prims['stator']['core']['coil_front'].stipple = 'gray50'
-    prims['stator']['core']['coil_front'].fill = '#00ffaa'
+    prims['stator']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], n=phases*coils_per_phase)
+    prims['stator']['coil_front'].stipple = 'gray50'
+    prims['stator']['coil_front'].fill = '#00ffaa'
 
     prims['rotor'] = []
     prims['rotor']['shaft'] = Primitive(canvas, **assets[name := 'shaft'], name=name)
