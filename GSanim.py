@@ -24,24 +24,30 @@ class CustomAnim(Animation):
 
         self.widgets = widgets
 
+        self._fr_inc = None
+        self._fs_inc = None
+        self.fs = None
+        self.fr = None
+        self.thr = None
+        self.ths = None
+        self.time_factor = None
+        self.reset_time()
+
+        self.run = True
+
+
+
+
         # para média móvel da exibição do FPS
         self.dt_filter_buffer = deque(maxlen=100)
         self.dc_filter_buffer = deque(maxlen=100)
-        self.time_factor = 140
-        self.plot_downsample_factor = 1
-        self.run = True
+        self.plot_downsample_factor = 3
 
         self.select_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
         self.select_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
 
-        self.ths = 0.0     # angulo mecânico do estador
-        self.thr = 0.0     # angulo mecânico do rotor
-        self.fs = 0.0
-        self.fr = 20.0
 
-        self._fs_inc = 0.0
-        self._fr_inc = 0.0
 
 
         # para plots
@@ -60,18 +66,18 @@ class CustomAnim(Animation):
         dt /= self.time_factor     # time scaled dt for animation
         redraw_plt = frame_count % self.plot_downsample_factor == 0
 
-        if self.run:
-            # self.prims['rotor'].rotate(self.thr)
-            # self.prims['stator'].rotate(self.ths)
-            pass
+
+        self.prims['rotor'].rotate(self.thr)
+        self.prims['stator'].rotate(self.ths)
 
 
         self.prims.draw()
 
-        if redraw_plt:
-            for fig in self.widgets['figs']:
+
+        for fig in self.widgets['figs']:
+            if redraw_plt:
                 fig.canvas.draw()
-                fig.canvas.flush_events()
+            fig.canvas.flush_events()
 
         if self._fs_inc:
             self.fs += self._fs_inc
@@ -124,6 +130,21 @@ class CustomAnim(Animation):
         self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.1f} x")
         self.widgets['frame_delay'].config(text=f"   frame delay: {self.frame_delay:>5} ms")
 
+    def reset_time(self, reset_and_stop=False):
+        self._t_init = time.time()
+        self.time_factor = 140
+        self._t_start = 0.0
+        self.thr = 0.0
+        self.ths = 0.0
+        self.fr = 57.0
+        self.fs = 0.0
+        self._fs_inc = 0.0
+        self._fr_inc = 0.0
+
+        if reset_and_stop:
+            self.run = False
+            # self.draw_all()
+
 
 
     def binds(self) -> None:
@@ -159,16 +180,6 @@ class CustomAnim(Animation):
             self.update_info()
 
 
-        def reset_time(reset_and_stop=False):
-            self._t_init = time.time()
-            self._t_start = 0.0
-            self.thr = 0.0
-            self.ths = 0.0
-
-            if reset_and_stop:
-                self.run = False
-                # self.draw_all()
-
         def change_display_mu():
             next(self.select_unit)
             self.update_info()
@@ -199,13 +210,13 @@ class CustomAnim(Animation):
         self.canvas.window.bind('<space>', lambda event: toggle_run())
 
         self.canvas.window.bind('<F1>', lambda event: show_binds())
-        self.canvas.window.bind('<Escape>', lambda event: reset_time(reset_and_stop=True))
-        self.canvas.window.bind('<0>',     lambda event: reset_time())
+        self.canvas.window.bind('<Escape>', lambda event: self.reset_time(reset_and_stop=True))
+        self.canvas.window.bind('<0>',     lambda event: self.reset_time())
 
         self.canvas.window.bind('m', lambda event: change_slots('stator'))
         self.canvas.window.bind('n', lambda event: change_slots('rotor'))
-        self.canvas.window.bind('d', lambda event: self.destroy())
-        self.canvas.window.bind('c', lambda event: self.create())
+        # self.canvas.window.bind('d', lambda event: self.destroy())
+        # self.canvas.window.bind('c', lambda event: self.create())
 
 
 
