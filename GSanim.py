@@ -15,7 +15,7 @@ from typing import Literal
 from MITsim import MITsim
 from gvec import GraphicVec2
 import matplotlib.pyplot as plt
-from custom_graphics import synchronous_generator_draw, create_circular_pattern
+from custom_graphics import synchronous_generator_draw, create_circular_pattern, ThreePhaseIndexIterator
 
 
 class CustomAnim(Animation):
@@ -32,7 +32,7 @@ class CustomAnim(Animation):
         self.run = True
 
         self.select_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_stator_turns = CircularDict({'simp': (2, 3), 'full': (6, 3), 'mono': (2, 2)})  # versão do estator com n espiras por fase
+        self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
 
         self.ths = 0.0     # angulo mecânico do estador
         self.thr = 0.0     # angulo mecânico do rotor
@@ -181,7 +181,7 @@ class CustomAnim(Animation):
 
             prims['stator']['core']['slots'].delete_descendant_primitives()
             prims['stator']['coil'].delete_descendant_primitives()
-            prims['stator']['coil_front'].delete_descendant_primitives()
+            # prims['stator']['coil_front'].delete_descendant_primitives()
 
             print('\n')
             self.prims.print_tree()
@@ -192,16 +192,24 @@ class CustomAnim(Animation):
 
             coils_per_phase, phases = self.select_stator_turns.current_value
 
-            prims['stator']['core']['slots'] = create_circular_pattern(canvas,['stator_cutout','stator_cutout_outline'],n=phases*coils_per_phase)
+            prims['stator']['core']['slots'] = create_circular_pattern(canvas,['stator_cutout','stator_cutout_outline'],pattern=phases*coils_per_phase)
 
-            prims['stator']['coil'] = create_circular_pattern(canvas, ['stator_esp'], n=phases*coils_per_phase)
-            prims['stator']['coil'].stroke = '#ff0000'
-            prims['stator']['coil'].fill = '#00ffaa'
-            prims['stator']['coil'].width = 4
-
-            prims['stator']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], n=phases*coils_per_phase)
-            prims['stator']['coil_front'].stipple = 'gray50'
-            prims['stator']['coil_front'].fill = '#00ffaa'
+            prims['stator']['coil'] = []
+            prims['stator']['coil']['a'] = create_circular_pattern(canvas, ['stator_esp'],
+                                                                   pattern=ThreePhaseIndexIterator(
+                                                                       phases * coils_per_phase, 0))
+            prims['stator']['coil']['a'].stroke = cl['a']
+            prims['stator']['coil']['a'].fill = cl['a']
+            prims['stator']['coil']['b'] = create_circular_pattern(canvas, ['stator_esp'],
+                                                                   pattern=ThreePhaseIndexIterator(
+                                                                       phases * coils_per_phase, 1))
+            prims['stator']['coil']['b'].stroke = cl['b']
+            prims['stator']['coil']['b'].fill = cl['b']
+            prims['stator']['coil']['c'] = create_circular_pattern(canvas, ['stator_esp'],
+                                                                   pattern=ThreePhaseIndexIterator(
+                                                                       phases * coils_per_phase, 2))
+            prims['stator']['coil']['c'].stroke = cl['c']
+            prims['stator']['coil']['c'].fill = cl['c']
 
             print('\n')
             self.prims.print_tree()
