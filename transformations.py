@@ -105,6 +105,17 @@ def scale_hsl(rgb, hue: float = 1.0, sat: float = 1.0, lum: float = 1.0) -> tupl
     h, s, l = rgb_to_hls(*rgb)
     return hls_to_rgb(h*hue, s*sat, l*lum)
 
+def scale_rgb(rgb, factor) -> tuple[float, ...]:
+
+    type_in = type(rgb)
+
+    r, g, b = (hex_to_rgb(rgb) if type_in == str else rgb)
+
+    ret = (r*factor, g*factor, b*factor)
+
+    if type_in == str:
+        return rgb_to_hex(ret)
+    return ret
 
 def set_hsl(rgb,
             hue: float | None = None,

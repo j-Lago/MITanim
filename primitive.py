@@ -7,6 +7,7 @@ from typing import Literal, Any
 from copy import copy, deepcopy
 
 from types import FunctionType
+from copy import copy, deepcopy
 
 
 
@@ -184,6 +185,7 @@ class Primitive:
 
     def delete(self):
         self._canvas.delete(self._handle)
+        del self
 
     def draw(self,
              reset_transforms_to_original_after_draw: bool = True,
@@ -231,17 +233,50 @@ class PrimitivesGroup:
     def get_index(self, key):
         return tuple(id for id, prim in enumerate(self.nodes) if prim.name == key)
 
-    def __del__(self):
-        self.delete_descendant_primitives()
-        del self
+    def filter_matching_keys(self, *keys):
+        founds_child = []
+        keys_copy = list(keys)
 
-    def delete_descendant_primitives(self):
+        if isinstance(keys_copy, str):
+            keys_copy = [keys_copy]
+
+        if len(keys_copy) > 0:
+            root_key = keys_copy.pop(0)
+            founds_root = self.filter_single_key(root_key)
+
+            if len(keys_copy) > 0:
+                for found in founds_root:
+                    founds2 = found.filter_matching_keys(*keys_copy)
+                    for found_child in founds2:
+                        founds_child.append(found_child)
+            else:
+                return founds_root
+        return founds_child
+
+
+    def filter_single_key(self, key):
+        ret = []
         for node in self.nodes:
             if isinstance(node, PrimitivesGroup):
-                node.delete_descendant_primitives()
+                if node.name == key:
+                    ret.append(node)
+                founds = node.filter_single_key(key)
+                for found in founds:
+                    ret.append(found)
+
+        return ret
+
+    def __delitem__(self, key):
+        for i in self.get_index(key):
+            self[i].delete_descendant_nodes()
+            del self.nodes[i]
+
+    def delete_descendant_nodes(self):
+        for node in self.nodes:
+            if isinstance(node, PrimitivesGroup):
+                node.delete_descendant_nodes()
             else:
                 node.delete()
-                del node
         self.nodes = []
 
 
@@ -337,10 +372,25 @@ class PrimitivesGroup:
             child.stipple = stipple
     stipple = property(None, stipple)
 
+    def rotate(self, *args, **kwargs):
+        for child in self.nodes:
+            child.rotate( *args, **kwargs)
+
+    def translate(self, *args, **kwargs):
+        for child in self.nodes:
+            child.translate( *args, **kwargs)
+
+    def scale(self, *args, **kwargs):
+        for child in self.nodes:
+            child.scale( *args, **kwargs)
+
+    def reverse(self, *args, **kwargs):
+        for child in self.nodes:
+            child.reverse( *args, **kwargs)
+
     def draw(self, level=0, parent_visible=True, *args, **kwargs):
         for child in self.nodes:
             child.draw(*args, **kwargs)
-
 
     def print_tree(self, level=0):
         class style:
@@ -364,7 +414,7 @@ class PrimitivesGroup:
             CHECK = style.GREEN + '\u2714'
 
         node_sty = style.NODE if self.visible and self.parent_visible else style.iNODE
-        print(node_sty + f'{'   ' * level}↳ [{level}] {self.name} ({symbol.CHECK if self.parent_visible else symbol.CROSS}{symbol.CHECK if self.visible else symbol.CROSS}' + node_sty + f'):'  + style.RESET)
+        print(node_sty + f'{'   ' * level}↳ [{level}] {self.name} ({symbol.CHECK if self.parent_visible else symbol.CROSS}{symbol.CHECK if self.visible else symbol.CROSS}' + node_sty + f'):'  + f' at {hex(id(self))}' + style.RESET)
         for prim in self.nodes:
             if isinstance(prim, PrimitivesGroup):
                 prim.print_tree(level=level+1)
