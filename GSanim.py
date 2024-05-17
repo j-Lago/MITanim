@@ -19,19 +19,19 @@ from custom_graphics import synchronous_generator_draw, circular_pattern, IndexF
 from threading import Thread, Event
 
 
-def plot_thread(event_kill, event_redraw: Event, figs):
-    while not event_kill.is_set():
-        event_redraw.wait()
+def plot_thread(event_redraw: Event, figs):
+    while True:
+        event_redraw.wait(.2)
         for fig in figs:
             # fig.axes.clear()
             fig.canvas.draw()
         event_redraw.clear()
-    event_kill.clear()
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
         super().__init__(canvas, frame_delay=0)
 
+        self._fs_inc = None
         self.plt_lines = None
         self.widgets = widgets
 
@@ -54,8 +54,9 @@ class CustomAnim(Animation):
         # para média móvel da exibição do FPS
         self.dt_filter_buffer = deque(maxlen=100)
         self.dc_filter_buffer = deque(maxlen=100)
-        self.plot_downsample_factor = 3
+        self.plot_downsample_factor = 1
 
+        self.fig1_show = CircularDict({ '': 20, 'I2': 20, 'I1': 20})  #  'atributo': ylim
         self.fig0_show = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
         self.select_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
@@ -77,10 +78,8 @@ class CustomAnim(Animation):
         self.ax_npt = 150
         self.plt_t = deque(maxlen=self.ax_npt)
         self.plt_y = (deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt))
-
-        self.plot_x_vs_time()
-
-
+        self.plot_fig0()
+        self.plot_fig1()
 
         self.prims = PrimitivesGroup('root', [])
         self.create()
@@ -88,85 +87,136 @@ class CustomAnim(Animation):
         self.prims.draw(consolidate_transforms_to_original=True)
 
         self.plt_thread_redraw = Event()
-        self.plt_thread = Thread(target=plot_thread, args=(self._closing_event, self.plt_thread_redraw, self.widgets['figs']))
+        self.plt_thread = Thread(target=plot_thread, args=(self.plt_thread_redraw, self.widgets['figs']), daemon=True)
         self.plt_thread.start()
 
         self.binds()
 
-    def plot_x_vs_time(self):
-        axs = (self.widgets['figs'][0].axes[0], self.widgets['figs'][1].axes[0])
-        self.plt_t.extend(np.linspace(-0.04, 0.00, self.ax_npt))
-        self.invalidate_plt_data(self.time_factor)
+    def plot_fig0(self):
+        marker_size = 8
+        ax = self.widgets['figs'][0].axes[0]
+        ax.axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
 
-        axs[0].set_ylim(-1.2, 1.2)
-        axs[0].set_xticks([])
+
+        self.plt_t.extend(np.linspace(-0.04, 0.00, self.ax_npt))
+        self.invalidate_fig0_data(self.time_factor)
+
+        ax.set_ylim(-1.2, 1.2)
+        ax.set_xticks([])
 
         self.plt_lines = {}
         for i, ph in enumerate('abc'):
-            self.plt_lines[ph] = (axs[0].plot(self.plt_t, self.plt_y[i], color=cl[ph], lw=2))[0]
-            self.plt_lines[ph+'_marker'] = (axs[0].plot((0.0,), (0.0,), color=cl[ph], marker='o', markersize=8))[0]
+            self.plt_lines[ph] = (ax.plot(self.plt_t, self.plt_y[i], color=cl[ph], lw=2))[0]
+            self.plt_lines[ph+'_marker'] = (ax.plot((0.0,), (0.0,), color=cl[ph], marker='o', markersize=marker_size))[0]
 
 
+    def plot_fig1(self):
+        marker_size = 8
+        cursor_lw = 1.5
+        nmax = 3800
 
+        ax = self.widgets['figs'][1].axes[0]
+        ax.axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
+        ax.axvline(0, linestyle='--', color=cl['grid'], linewidth=1)
 
-    def refresh(self, _, dt, frame_count):
-        self.update_fps_info(dt)
+        wmax = nmax * pi / 30.0
+        self.mit.V1 = 1.0 * self.mit.V1nom
+        self.mit.f = self.fg
+        mit_curves = self.mit.solve_range(-wmax*0.05, wmax, self.ax_npt, ['I1', 'Tind'])
+        y1s = abs(mit_curves['I1'])
+        y0s = mit_curves['Tind']
+        nrs = mit_curves['nr']
 
-        dt /= self.time_factor     # time scaled dt for animation
-        redraw_plt = frame_count % self.plot_downsample_factor == 0
-
-
-        # plot resample
         self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
         self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
         self.mit.f = self.fg
         self.mit.solve()
 
-        th_er = self.thg - self.thr - pi
-        V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - i * 2 * pi / 3) for i in range(3))
-        Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
-        I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
-        Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * 2 * pi / 3) for i in range(3))
-
-        mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
-
-
-        if redraw_plt and self.run:
-            self.update_fig0(mit_t)
-
-        self.update_fields(mit_t)
-
-        self.prims['rotor'].rotate(self.thr)
-        self.prims['stator'].rotate(self.ths)
-
-        self.prims.draw()
+        self.plt_lines['ws_cursor'] = ax.axvline(self.mit.ns, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
+        self.plt_lines['wr_cursor'] = ax.axvline(self.mit.nr, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
+        self.plt_lines['Tind'] = (ax.plot(nrs, y0s, color=cl['Tind'], lw=2))[0]
+        self.plt_lines['Ix'] = (ax.plot(nrs, y1s, color=cl['I1'], lw=2))[0]
+        self.plt_lines['Tind_marker'] = (ax.plot(self.mit.nr, self.mit.Tind, color=cl['Tind'], marker='o', markersize=marker_size, lw=2))[0]
+        self.plt_lines['Ix_marker'] = (ax.plot(self.mit.nr, self.mit.I1, color=cl['I1'], marker='o', markersize=marker_size, lw=2))[0]
+        ax.set_xlim(min(nrs), max(nrs))
 
 
-        if self._fs_inc:
-            self.fs += self._fs_inc
-            self._fs_inc = 0.0
-
-        if self._fg_inc:
-            self.fg += self._fg_inc
-            self._fg_inc = 0.0
-
-        if self._s_inc:
-            self.s += self._s_inc
-            self._s_inc = 0.0
-
-        if self.run:
-            self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
-            self.thr = (self.thr + dt * (1.0-self.s) * self.fg * 2 * pi) % (2 * pi)
-            self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
-            self.t += dt
-
-        self.plt_thread_redraw.set()
-        if redraw_plt:
-            for fig in self.widgets['figs']:
-                fig.canvas.flush_events()
 
 
-        self.update_info()
+    def refresh(self, _, dt, frame_count):
+            self.update_fps_info(dt)
+
+            dt /= self.time_factor     # time scaled dt for animation
+            redraw_plt = frame_count % self.plot_downsample_factor == 0
+
+            if redraw_plt and self.run:
+                self.update_fig1()
+
+
+
+            # plot resample
+            self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
+            self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
+            self.mit.f = self.fg
+            self.mit.solve()
+
+            th_er = self.thg - self.thr - pi
+            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - i * 2 * pi / 3) for i in range(3))
+            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
+            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
+            Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * 2 * pi / 3) for i in range(3))
+
+            mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
+
+
+            if redraw_plt and self.run:
+                self.update_fig0(mit_t)
+
+            self.update_fields(mit_t)
+
+            self.prims['rotor'].rotate(self.thr)
+            self.prims['stator'].rotate(self.ths)
+
+            self.prims.draw()
+
+
+
+
+            if self._fs_inc:
+                self.fs += self._fs_inc
+                self._fs_inc = 0.0
+
+            # previous_fg = self.fg
+            if self._fg_inc:
+                self.fg += self._fg_inc
+                self._fg_inc = 0.0
+
+            if self._s_inc:
+                self.s += self._s_inc
+                self._s_inc = 0.0
+
+
+            
+            
+
+                
+            # if previous_fg * self.fg < 0:  # inversão campo girante
+            #     self.s = - self.s
+
+
+            if self.run:
+                self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
+                self.thr = (self.thr + dt * (1.0-self.s) * self.fg * 2 * pi) % (2 * pi)
+                self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
+                self.t += dt
+
+            if redraw_plt:
+                self.plt_thread_redraw.set()
+                for fig in self.widgets['figs']:
+                    fig.canvas.flush_events()
+
+            self.update_info()
+    # ------------------------------- end of refresh -------------------------------------
 
     def update_fields(self, mit_t):
         for i, ph in enumerate('abc'):
@@ -182,6 +232,7 @@ class CustomAnim(Animation):
         self.prims['rotor']['field']['vec']['r'][0].from_complex(self.prims['rotor']['field']['vec']['x'][0].to_complex() +
                                                                  self.prims['rotor']['field']['vec']['y'][0].to_complex() +
                                                                  self.prims['rotor']['field']['vec']['z'][0].to_complex())
+
 
     def update_fig0(self, mit_t):
         ax = self.widgets['figs'][0].axes[0]
@@ -204,7 +255,83 @@ class CustomAnim(Animation):
         ax.set_ylim(-y_max, y_max)
         ax.set_ylabel(self.fig0_show.current_key)
 
-    # ------------------------------- end of refresh -------------------------------------
+
+
+    def update_fig1(self):
+        ax = self.widgets['figs'][1].axes[0]
+        
+        lim_max = 4200.0
+        lim_min = 200.0
+
+        nmax = lim_max
+        nmin = -lim_min
+
+        if self.fg < 0:
+            nmax = lim_min
+            nmin = -lim_max
+        if self.s > 1:
+            dx = self.mit.nr
+            nmax += dx
+            nmin += dx
+        if self.s <= 0 and self.fg > 0:
+            dx = self.mit.nr -lim_max +lim_min
+            nmax = max(nmax+dx, nmax)
+            nmin = max(nmin+dx, nmin)
+        if self.s < 0 and self.fg < 0:
+            dx = self.mit.nr + lim_max -lim_min
+            nmax = min(nmax + dx, nmax)
+            nmin = min(nmin + dx, nmin)
+
+        wmax = nmax * pi / 30.0
+        wmin = nmin * pi / 30.0
+
+        self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
+        self.mit.f = self.fg
+        self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
+
+        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt, [self.fig1_show.current_key, 'Tind'])
+        ixs = abs(mit_curves[self.fig1_show.current_key])
+        tinds = mit_curves['Tind']
+        nrs = mit_curves['nr']
+
+        self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
+        self.mit.f = self.fg
+        self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
+        self.mit.solve()
+
+        self.plt_lines['ws_cursor'].set_xdata((self.mit.ns, ))
+        self.plt_lines['wr_cursor'].set_xdata((self.mit.nr, ))
+        self.plt_lines['Tind'].set_ydata(tinds)
+        self.plt_lines['Tind'].set_xdata(nrs)
+        self.plt_lines['Ix'].set_ydata(ixs)
+        self.plt_lines['Ix'].set_xdata(nrs)
+        self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind,))
+        self.plt_lines['Tind_marker'].set_xdata((self.mit.nr,))
+        self.plt_lines['Ix_marker'].set_ydata((abs(self.mit[self.fig1_show.current_key]), ))
+        self.plt_lines['Ix_marker'].set_xdata((self.mit.nr,))
+        ax.set_xlim(min(nrs), max(nrs))
+
+        ypad = 1.1
+        ymax = self.fig1_show.current_value       #np.max(tinds) * ypad
+        ymin = -self.fig1_show.current_value       #np.min(tinds) * ypad
+
+        # ymax = np.max(tinds) * ypad
+        # ymin = np.min(tinds) * ypad
+
+        sat = 0.12
+        if self.s < 0:
+            sat = 1.0
+
+        if self.fg > 0:
+            ymin = -sat*ymax
+
+        # if self.fg < 0:
+        #     ymax = -sat*ymin
+
+        ax.set_ylim(ymin, ymax)
+        ax.set_ylabel('Tind' + ((', ' + self.fig1_show.current_key) if self.fig1_show.current_key else '') )
+
+
 
 
     def update_fps_info(self, dt:float):
@@ -218,13 +345,13 @@ class CustomAnim(Animation):
         del self.prims['rotor']
         self.canvas.delete('all')
 
-        print('\n')
-        self.prims.print_tree()
+        # print('\n')
+        # self.prims.print_tree()
 
     def create(self):
         synchronous_generator_draw(self.canvas, self.prims, self.select_stator_turns.current_value[0], self.select_rotor_turns.current_value[0])
-        print('\n')
-        self.prims.print_tree()
+        # print('\n')
+        # self.prims.print_tree()
 
 
     def update_info(self):
@@ -246,7 +373,7 @@ class CustomAnim(Animation):
 
     def reset_time(self, reset_and_stop=False):
         if self.t is not None:
-            self.invalidate_plt_data()
+            self.invalidate_fig0_data()
 
         self._t_init = time.time()
         self.time_factor = 140
@@ -266,7 +393,7 @@ class CustomAnim(Animation):
             self.run = False
             # self.draw_all()
 
-    def invalidate_plt_data(self, previous_time_factor=None):
+    def invalidate_fig0_data(self, previous_time_factor=None):
 
         if not previous_time_factor:
             previous_time_factor = self.time_factor
@@ -302,6 +429,8 @@ class CustomAnim(Animation):
                 case 'fs':
                     self._fs_inc = clip(self.fs + increment, v_min, v_max) - self.fs
                 case 's':
+                    if self.fg < 0:
+                        increment = - increment
                     self._s_inc = clip(self.s + increment, v_min, v_max) - self.s
                 case 'fg':
                     self._fg_inc = clip(self.fg + increment, v_min, v_max) - self.fg
@@ -310,7 +439,7 @@ class CustomAnim(Animation):
                 case 'time_factor':
                     last = self.time_factor
                     self.time_factor = clip(self.time_factor + increment, v_min, v_max)
-                    self.invalidate_plt_data(last)
+                    self.invalidate_fig0_data(last)
 
             self.update_info()
 
@@ -331,12 +460,12 @@ class CustomAnim(Animation):
 
         def choose_fig0_show():
             next(self.fig0_show)
-            self.invalidate_plt_data()
+            self.invalidate_fig0_data()
 
         def choose_fig1_show():
-            raise NotImplementedError
+            next(self.fig1_show)
 
-        dw_inc = 0.83333333333333333333333333
+        dw_inc = 0.89   #0.83333333333333333333333333
         f_max = 70
         self.canvas.window.bind('+', lambda event: inc_value('fs', 1, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))

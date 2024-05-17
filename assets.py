@@ -1,6 +1,11 @@
 
 contrast_color_scale = 0.7
 
+fonts = {
+        'default': ('Courier', 14),
+        'fps': ('Poor Richard', 14),
+    }
+
 cl = {'bg': '#ffffff',
           'airgap': '#ffffff',
           'outline': '#666666',
@@ -20,7 +25,7 @@ cl = {'bg': '#ffffff',
           'I1': '#5716aa',
           'Tind': '#11a322',
           'ws_cursor': '#ff7777',
-          'wr_cursor': '#000000',
+          'wr_cursor': '#138D75',
           'grid': '#3d3d3d',
           }
 

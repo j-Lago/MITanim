@@ -3,7 +3,7 @@ from GSanim import CustomAnim
 
 import tkinter as tk
 from NormCanvas import NormCanvas
-from assets import cl
+from assets import cl, fonts
 import numpy as np
 from math import sin, cos, sqrt, pi, atan2, fabs
 
@@ -23,11 +23,6 @@ def main():
     fig0, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
     fig1, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
 
-
-    fonts = {
-        'default': ('Courier', 16),
-        'fps': ('Poor Richard', 14),
-    }
 
     infos = tk.Frame(window, bg=cl['bg'])
     controls = tk.Frame(window, bg=cl['bg'])

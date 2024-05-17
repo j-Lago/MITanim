@@ -5,7 +5,7 @@ import warnings
 
 class MITsim:
     def __init__(self, R1: float, X1: float, R2: float, X2: float, Rc: float, Xm: float, p: int = 2,
-                 V1nom: float = 1.0, fnom: float = 60.0, fcomp0: float = 10.0, mcomp0: float = 0.017, Ns_Nr = 150):
+                 V1nom: float = 1.0, fnom: float = 60.0, fcomp0: float = 10.0, mcomp0: float = 0.017, Ns_Nr=150):
 
         self.mcomp0 = mcomp0
         self.fcomp0 = fcomp0
@@ -39,6 +39,13 @@ class MITsim:
         self.ws = (2.0 * pi * self.f) * (2.0 / self.p)
         return (self.ws - self.wr) / self.ws if self.ws != 0 else float('nan')
 
+    @property
+    def ns(self):
+        return self.ws * 30.0 / pi
+
+    @property
+    def nr(self):
+        return self.wr * 30.0 / pi
 
     def solve(self):
 
@@ -104,6 +111,9 @@ class MITsim:
 
 
     def __getitem__(self, key):
+        if key == '':
+            return self.wr * np.nan
+
         if key in self.__dict__:
             return self.__dict__[key]
         else:
