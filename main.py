@@ -40,7 +40,7 @@ def main():
         'slip': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
         'time_factor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
         'frame_delay': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'Tcarga': tk.Checkbutton(controls, text='windings dynamic colors', bg=cl['bg']),
+        'sim_inertia': tk.Checkbutton(controls, text='Newton 2nd', bg=cl['bg']),
         'figs': [fig0, fig1],
     }
 
@@ -54,7 +54,7 @@ def main():
     widgets['time_factor'].pack(anchor='w', fill='none', side='top', expand=0)
     widgets['frame_delay'].pack(anchor='w', fill='none', side='top')
 
-    widgets['Tcarga'].pack(anchor='w', fill='none', side='bottom')
+    widgets['sim_inertia'].pack(anchor='w', fill='none', side='bottom')
     controls.pack(side='right')
     infos.pack(side='right')
 
