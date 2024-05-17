@@ -23,6 +23,10 @@ class MITsim:
         self.wr = 0.0
         self.Ns_Nr = Ns_Nr
 
+        self.k0 = 1.0
+        self.k1 = -0.00
+        self.k2 = 0.00001
+
         self.f = self.fnom
         self.I1 = complex(0.0 + 0.0) * 3
         self.E  = complex(0.0 + 0.0) * 3
@@ -32,6 +36,7 @@ class MITsim:
         self.Pconv = 0.0
         self.Pef = 0.0
         self.Tind = 0.0
+        self.Tres = 0.0
         self.nan = float('nan')   # hack para CircularDict -> mit['nan'] -> float('nan')
 
     @property
@@ -90,10 +95,19 @@ class MITsim:
         except ZeroDivisionError:
             self.Tind = 0.0
 
+        awr = abs(self.wr)
+        self.Tres = awr**2 * self.k2 + awr * self.k1 + self.k0
+        if self.wr < 0:
+            self.Tres = -self.Tres
+
 
     def solve_range(self, wr_start: float, wr_stop: float, samples: int, y_keys: list):
 
         wrs = np.linspace(wr_start, wr_stop, samples, dtype=float)
+
+
+
+
         data = {}
         for key in y_keys:
             data[key] = np.empty_like(wrs, dtype=type(self[key]))

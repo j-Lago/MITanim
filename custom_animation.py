@@ -732,7 +732,7 @@ class CustomAnim(Animation):
 
         dw_inc = 0.83333333333333333333333333
         f_max = 70
-        self.widgets['Tcarga'].configure(variable=self.dynamic_colors)
+        self.widgets['sim_inertia'].configure(variable=self.dynamic_colors)
         self.canvas.window.bind('o', lambda event: change_esp_front_opacity())
         self.canvas.window.bind('+', lambda event: inc_value('fs', 1, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))

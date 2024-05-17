@@ -46,17 +46,22 @@ class CustomAnim(Animation):
         self.thg = None
         self.t = None
         self.time_factor = None
+        self.inertia = None
         self.reset_time()
 
         self.run = True
+        self.sim_inertia = BoolVar(False)
+
 
 
         # para média móvel da exibição do FPS
         self.dt_filter_buffer = deque(maxlen=100)
         self.dc_filter_buffer = deque(maxlen=100)
-        self.plot_downsample_factor = 1
+        self.plot_downsample_factor = 2
 
-        self.fig1_show = CircularDict({ '': 20, 'I2': 20, 'I1': 20})  #  'atributo': ylim
+        self.fig1_show = CircularDict({ '': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
+        self.fig1_show.current_key = 'Tres'
+
         self.fig0_show = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
         self.select_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
@@ -182,27 +187,22 @@ class CustomAnim(Animation):
 
 
 
-            if self._fs_inc:
-                self.fs += self._fs_inc
-                self._fs_inc = 0.0
+            self.fs += self._fs_inc
+            self._fs_inc = 0.0
 
-            # previous_fg = self.fg
-            if self._fg_inc:
-                self.fg += self._fg_inc
-                self._fg_inc = 0.0
+            self.fg += self._fg_inc
+            self._fg_inc = 0.0
 
-            if self._s_inc:
+            if self.sim_inertia:
+                DT = (self.mit.Tind - self.mit.Tres)
+                fr = (1.0-self.s) * self.fg
+                fr += DT*dt / self.inertia
+                self.s = (self.fg - fr) / self.fg if self.fg != 0 else 0.0
+                self.s = clip(self.s, -0.2, 1.2)
+                self._s_inc = 0.0
+            else:
                 self.s += self._s_inc
                 self._s_inc = 0.0
-
-
-            
-            
-
-                
-            # if previous_fg * self.fg < 0:  # inversão campo girante
-            #     self.s = - self.s
-
 
             if self.run:
                 self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
@@ -290,8 +290,8 @@ class CustomAnim(Animation):
         self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
 
         mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt, [self.fig1_show.current_key, 'Tind'])
-        ixs = abs(mit_curves[self.fig1_show.current_key])
-        tinds = mit_curves['Tind']
+        Xs = abs(mit_curves[self.fig1_show.current_key]) if self.fig1_show.current_key[0] == 'I' else mit_curves[self.fig1_show.current_key]
+        Tinds = mit_curves['Tind']
         nrs = mit_curves['nr']
 
         self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
@@ -301,22 +301,24 @@ class CustomAnim(Animation):
 
         self.plt_lines['ws_cursor'].set_xdata((self.mit.ns, ))
         self.plt_lines['wr_cursor'].set_xdata((self.mit.nr, ))
-        self.plt_lines['Tind'].set_ydata(tinds)
+        self.plt_lines['Tind'].set_ydata(Tinds)
         self.plt_lines['Tind'].set_xdata(nrs)
-        self.plt_lines['Ix'].set_ydata(ixs)
+        self.plt_lines['Ix'].set_ydata(Xs)
         self.plt_lines['Ix'].set_xdata(nrs)
         self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind,))
         self.plt_lines['Tind_marker'].set_xdata((self.mit.nr,))
-        self.plt_lines['Ix_marker'].set_ydata((abs(self.mit[self.fig1_show.current_key]), ))
+        self.plt_lines['Ix_marker'].set_ydata(((abs(self.mit[self.fig1_show.current_key]) if self.fig1_show.current_key[0] == 'I' else self.mit[self.fig1_show.current_key]),))
         self.plt_lines['Ix_marker'].set_xdata((self.mit.nr,))
+
+        self.plt_lines['Ix'].set_color(cl[self.fig1_show.current_key])
+        self.plt_lines['Ix_marker'].set_color(cl[self.fig1_show.current_key])
         ax.set_xlim(min(nrs), max(nrs))
 
-        ypad = 1.1
-        ymax = self.fig1_show.current_value       #np.max(tinds) * ypad
-        ymin = -self.fig1_show.current_value       #np.min(tinds) * ypad
-
-        # ymax = np.max(tinds) * ypad
-        # ymin = np.min(tinds) * ypad
+        # ypad = 1.1
+        # ymax = np.max(Tinds) * ypad
+        # ymin = np.min(Tinds) * ypad
+        ymax = 20
+        ymin = -ymax
 
         sat = 0.12
         if self.s < 0:
@@ -388,6 +390,7 @@ class CustomAnim(Animation):
         self._fs_inc = 0.0
         self._fg_inc = 0.0
         self._s_inc = 0.0
+        self.inertia = 0.01
 
         if reset_and_stop:
             self.run = False
@@ -434,6 +437,10 @@ class CustomAnim(Animation):
                     self._s_inc = clip(self.s + increment, v_min, v_max) - self.s
                 case 'fg':
                     self._fg_inc = clip(self.fg + increment, v_min, v_max) - self.fg
+                case 'Tres':
+                    self.mit.k0 = clip(self.mit.k0 + increment, v_min, v_max)
+                    self.mit.k2 = clip(self.mit.k2 + increment*0.00001, v_min*0.00001, v_max*0.00001)
+
                 case 'delay':
                     self.frame_delay = int(clip(self.frame_delay + increment, v_min, v_max))
                 case 'time_factor':
@@ -471,11 +478,14 @@ class CustomAnim(Animation):
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))
         self.canvas.window.bind('<Right>', lambda event: inc_value('s', -0.01, -0.2, 2.2))
         self.canvas.window.bind('<Left>', lambda event: inc_value('s', 0.01, -0.2, 2.2))
-        self.canvas.window.bind('<Up>', lambda event: inc_value('fg', dw_inc, -f_max, f_max))
-        self.canvas.window.bind('<Down>', lambda event: inc_value('fg', -dw_inc, -f_max, f_max))
+        self.canvas.window.bind(',', lambda event: inc_value('fg', dw_inc, -f_max, f_max))
+        self.canvas.window.bind('.', lambda event: inc_value('fg', -dw_inc, -f_max, f_max))
 
-        self.canvas.window.bind('.', lambda event: inc_value('time_factor', self.time_factor*.2, 32.45273575943723503208293147346, 1492.992))
-        self.canvas.window.bind(',', lambda event: inc_value('time_factor', -self.time_factor*.16666666666666666666666666666667, 32.45273575943723503208293147346, 1492.992))
+        self.canvas.window.bind('<Up>', lambda event: inc_value('Tres', 0.2, -11, 11))
+        self.canvas.window.bind('<Down>', lambda event: inc_value('Tres', -0.2, -11, 11))
+
+        self.canvas.window.bind(']', lambda event: inc_value('time_factor', self.time_factor*.2, 32.45273575943723503208293147346, 1492.992))
+        self.canvas.window.bind('[', lambda event: inc_value('time_factor', -self.time_factor*.16666666666666666666666666666667, 32.45273575943723503208293147346, 1492.992))
 
         self.canvas.window.bind('u', lambda event: change_display_mu() )
         self.canvas.window.bind('*',       lambda event: inc_value('delay', 1, 0, 30))
@@ -492,3 +502,5 @@ class CustomAnim(Animation):
         # self.canvas.window.bind('c', lambda event: self.create())
         self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: choose_fig0_show())
         self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: choose_fig1_show())
+
+        self.widgets['sim_inertia'].configure(variable=self.sim_inertia)
