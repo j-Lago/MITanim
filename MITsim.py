@@ -46,7 +46,7 @@ class MITsim:
 
     @property
     def ns(self):
-        return self.ws * 30.0 / pi
+        return self.f * 2*60 / self.p
 
     @property
     def nr(self):
@@ -100,6 +100,11 @@ class MITsim:
         if self.wr < 0:
             self.Tres = -self.Tres
 
+        dead_zone = 2
+        if -dead_zone < self.wr < dead_zone:
+            self.Tres = 0.0
+
+
 
     def solve_range(self, wr_start: float, wr_stop: float, samples: int, y_keys: list):
 
@@ -125,7 +130,8 @@ class MITsim:
 
 
     def __getitem__(self, key):
-        if key == '':
+
+        if key == 'nan':
             return self.wr * np.nan
 
         if key in self.__dict__:

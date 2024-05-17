@@ -34,13 +34,19 @@ def main():
         'fps': tk.Label(window, text='fps:', font=fonts['fps'], fg='#bb5533', bg=cl['bg']),
         'canvas_fig0': FigureCanvasTkAgg(fig0, master=infos),
         'canvas_fig1': FigureCanvasTkAgg(fig1, master=infos),
-        'w_stator': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'w_rotor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'w_grid': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'slip': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'time_factor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'frame_delay': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg']),
-        'sim_inertia': tk.Checkbutton(controls, text='Newton 2nd', bg=cl['bg']),
+
+        'w_stator': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'w_rotor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'w_grid': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'slip': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'time_factor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'Pconv': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+
+        'sim_inertia': tk.Checkbutton(controls, text='Newton 2nd', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'rotor_field_lines': tk.Checkbutton(controls, text='Rotor field lines', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
+        'rotor_field_vec': tk.Checkbutton(controls, text='Rotor field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
+        'stator_field_lines': tk.Checkbutton(controls, text='Stator field lines', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
+        'stator_field_vec': tk.Checkbutton(controls, text='Stator field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
         'figs': [fig0, fig1],
     }
 
@@ -48,13 +54,18 @@ def main():
     widgets['canvas_fig1'].get_tk_widget().pack(anchor='ne', side='top', expand=0)
     widgets['fps'].pack(anchor='w', fill='none', side='top')
     widgets['w_stator'].pack(anchor='w', fill='none', side='top')
-    widgets['w_grid'].pack(anchor='w', fill='none', side='top')
     widgets['w_rotor'].pack(anchor='w', fill='none', side='top')
+    widgets['w_grid'].pack(anchor='w', fill='none', side='top')
     widgets['slip'].pack(anchor='w', fill='none', side='top')
+    widgets['Pconv'].pack(anchor='w', fill='none', side='top')
     widgets['time_factor'].pack(anchor='w', fill='none', side='top', expand=0)
-    widgets['frame_delay'].pack(anchor='w', fill='none', side='top')
 
     widgets['sim_inertia'].pack(anchor='w', fill='none', side='bottom')
+    widgets['rotor_field_lines'].pack(anchor='w', fill='none', side='bottom')
+    widgets['rotor_field_vec'].pack(anchor='w', fill='none', side='bottom')
+    widgets['stator_field_lines'].pack(anchor='w', fill='none', side='bottom')
+    widgets['stator_field_vec'].pack(anchor='w', fill='none', side='bottom')
+
     controls.pack(side='right')
     infos.pack(side='right')
 

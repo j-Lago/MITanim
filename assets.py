@@ -2,7 +2,7 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('Courier', 14),
+        'default': ('Courier bold', 14),
         'fps': ('Poor Richard', 14),
     }
 
@@ -22,7 +22,7 @@ cl = {'bg': '#ffffff',
       'r': '#FF6699',
       'Fe': '#cccccc',
       'shaft': '#777777',
-      '': '#000000',
+      'nan': '#000000',
       'I1': '#3e86f0',
       'I2': '#ae7bb5',
       'Tind': '#13ab45',
@@ -30,6 +30,7 @@ cl = {'bg': '#ffffff',
       'ws_cursor': '#ff7777',
       'wr_cursor': '#138D75',
       'grid': '#3d3d3d',
+      'default_font': '#4c6ca8',
       }
 
 w = 2

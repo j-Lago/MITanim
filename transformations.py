@@ -146,18 +146,18 @@ class CircularDict(dict):
         self._current_key = keys[0]
 
     @property
-    def current_key(self):
+    def key(self):
         return self._current_key
 
-    @current_key.setter
-    def current_key(self, value):
+    @key.setter
+    def key(self, value):
         if value not in list(self.keys()):
             raise ValueError(f"a 'key' fornecida não faz parte do dicionário. São chaves válidas {list(self.keys())}")
         self._current_key = value
 
 
     @property
-    def current_value(self):
+    def value(self):
         return self[self._current_key]
 
     def __next__(self):

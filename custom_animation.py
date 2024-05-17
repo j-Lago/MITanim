@@ -326,7 +326,7 @@ class CustomAnim(Animation):
             self.mit.wr = wr
             self.mit.f = self.fg
             self.mit.solve()
-            y1s[k] = abs(self.mit[self.display_mit_ax1.current_key])
+            y1s[k] = abs(self.mit[self.display_mit_ax1.key])
             y0s[k] = self.mit.Tind
 
         self.plt_lines['I1'].set_ydata(y1s)
@@ -351,7 +351,7 @@ class CustomAnim(Animation):
         I2_abc = tuple(abs(self.mit.I2) * sin(th_er + phase(self.mit.I2) - i*2*pi/3) for i in range(3))
 
 
-        self.plt_lines['I1_marker'].set_ydata((abs(self.mit[self.display_mit_ax1.current_key]), abs(self.mit[self.display_mit_ax1.current_key])))
+        self.plt_lines['I1_marker'].set_ydata((abs(self.mit[self.display_mit_ax1.key]), abs(self.mit[self.display_mit_ax1.key])))
         self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind, self.mit.Tind))
         nr = self.mit.wr * 30.0 / pi
         ns = self.mit.ws * 30.0 / pi
@@ -383,7 +383,7 @@ class CustomAnim(Animation):
             self.widgets['figs'][1].axes[0].set_ylim(y_min, y_max)
             # self.widgets['figs'][1].axes[0].autoscale(enable=True, axis="y", tight=False)
 
-        self.widgets['figs'][1].axes[0].set_ylabel(f'Tind {', ' + self.display_mit_ax1.current_key if self.display_mit_ax1.current_key != 'nan' else ''}')
+        self.widgets['figs'][1].axes[0].set_ylabel(f'Tind {', ' + self.display_mit_ax1.key if self.display_mit_ax1.key != 'nan' else ''}')
 
 
         if self.run:
@@ -392,12 +392,12 @@ class CustomAnim(Animation):
             self.plt_t.append(self.t)
 
 
-            if self.display_mit_ax0.current_key == 'Ir':
+            if self.display_mit_ax0.key == 'Ir':
                 key = 'I2'
                 th = th_er
                 amp = abs(self.mit[key]) * self.Ns_Nr
             else:
-                key = self.display_mit_ax0.current_key
+                key = self.display_mit_ax0.key
                 th = self.thg
                 amp = abs(self.mit[key])
 
@@ -410,7 +410,7 @@ class CustomAnim(Animation):
 
         redraw_plt = frame_count % self.plt_subsample == 0
         phases = ('a', 'b', 'c')
-        plt_cl_keys = ('x', 'y', 'z') if self.display_mit_ax0.current_key == 'Ir' else phases
+        plt_cl_keys = ('x', 'y', 'z') if self.display_mit_ax0.key == 'Ir' else phases
         if redraw_plt:
             for k, phase_key in enumerate(phases):
                 self.plt_lines['vg_' + phase_key].set_ydata(self.plt_vgs[k])
@@ -423,11 +423,11 @@ class CustomAnim(Animation):
             pad = 0.1 / self.time_factor
             t_max = max(self.plt_t)+pad
             t_min = min(self.plt_t)+pad
-            y_max = self.display_mit_ax0.current_value
+            y_max = self.display_mit_ax0.value
 
             self.widgets['figs'][0].axes[0].set_xlim(t_min, t_max)
             self.widgets['figs'][0].axes[0].set_ylim(-y_max, y_max)
-            self.widgets['figs'][0].axes[0].set_ylabel(f'{self.display_mit_ax0.current_key if self.display_mit_ax0.current_key != 'nan' else ''}')
+            self.widgets['figs'][0].axes[0].set_ylabel(f'{self.display_mit_ax0.key if self.display_mit_ax0.key != 'nan' else ''}')
 
 
 
@@ -547,7 +547,7 @@ class CustomAnim(Animation):
                     prim.draw( *args, **kwargs)
 
     def update_info(self):
-        um_name = self.display_mu.current_key
+        um_name = self.display_mu.key
         um_factor = self.display_mu[um_name]
         um_name_g = um_name if um_name != 'rpm' else 'Hz'
         um_factor_g = self.display_mu[um_name_g]
@@ -726,7 +726,7 @@ class CustomAnim(Animation):
             for part in parts:
                 for group in groups:
                     for k, prims in enumerate(self.prims[part][group]):
-                        self.prims[part][group][k].stipple = self.esp_front_opacity.current_key
+                        self.prims[part][group][k].stipple = self.esp_front_opacity.key
 
 
 
