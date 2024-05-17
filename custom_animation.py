@@ -15,6 +15,8 @@ from typing import Literal
 from MITsim import MITsim
 from gvec import GraphicVec2
 import matplotlib.pyplot as plt
+from threading import Thread, Event
+
 
 class CustomAnim(Animation):
     def __init__(self, canvas: NormCanvas, widgets: dict):
@@ -85,7 +87,7 @@ class CustomAnim(Animation):
                           X2=22.4793 * Zbase * 1.5,
                           Rc=1.6261e+03 * Zbase,
                           Xm=419.2075 * Zbase,
-                          V1=380.0,
+                          V1nom=380.0,
                           fnom=60.0,
                           p=2
                           )

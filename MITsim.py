@@ -5,21 +5,23 @@ import warnings
 
 class MITsim:
     def __init__(self, R1: float, X1: float, R2: float, X2: float, Rc: float, Xm: float, p: int = 2,
-                 V1: float = 1.0, fnom: float = 60.0, fcomp0: float = 10.0, mcomp0: float = 0.017):
+                 V1nom: float = 1.0, fnom: float = 60.0, fcomp0: float = 10.0, mcomp0: float = 0.017, Ns_Nr = 150):
 
         self.mcomp0 = mcomp0
         self.fcomp0 = fcomp0
 
         self.p = p
         self.fnom = fnom
+        self.V1nom = V1nom
         self.R1 = R1
         self.X1 = X1
         self.R2 = R2
         self.X2 = X2
         self.Rc = Rc
         self.Xm = Xm
-        self.V1 = complex(V1 + 0.0)
+        self.V1 = complex(V1nom + 0.0)
         self.wr = 0.0
+        self.Ns_Nr = Ns_Nr
 
         self.f = self.fnom
         self.I1 = complex(0.0 + 0.0) * 3

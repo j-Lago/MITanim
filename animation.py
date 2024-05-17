@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from NormCanvas import NormCanvas
 from time import time
 from primitive import Primitive
+from threading import Event
 
 
 class Animation(ABC):
@@ -10,12 +11,16 @@ class Animation(ABC):
         self._t_init = time()
         self._t_start = 0.0
         self._frame_count = 0
+        self._closing_event = Event()
 
         self.canvas = canvas
         self.frame_delay = frame_delay
 
         self._close_next_refresh = False
-        def close_next_refresh(): self._close_next_refresh = True
+        def close_next_refresh():
+            self._close_next_refresh = True
+            self._closing_event.set()
+
         self.canvas.window.protocol("WM_DELETE_WINDOW", close_next_refresh)
 
 

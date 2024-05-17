@@ -6,12 +6,15 @@ from math import pi
 from typing import Literal
 from collections.abc import Iterator, Iterable
 from NormCanvas import NormCanvas
+from gvec import GraphicVec2
+
 
 
 def synchronous_generator_draw(canvas, prims, s_coils_per_phase, r_coils_per_phase):
 
     create_stator(canvas, prims, s_coils_per_phase)
     create_rotor(canvas, prims, r_coils_per_phase)
+    create_fields(canvas, prims)
 
 
 def create_rotor(canvas, prims, coils_per_phase, phases=3):
@@ -30,7 +33,7 @@ def create_rotor(canvas, prims, coils_per_phase, phases=3):
     prims['rotor']['coil']['x'] = circular_pattern(canvas, ['rotor_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 0))
     prims['rotor']['coil']['y'] = circular_pattern(canvas, ['rotor_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 1))
     prims['rotor']['coil']['z'] = circular_pattern(canvas, ['rotor_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 2))
-    for phase in ('x', 'y', 'z'):
+    for phase in 'xyz':
         for node in prims.filter_matching_keys('coil', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = cl[phase]
@@ -45,10 +48,37 @@ def create_rotor(canvas, prims, coils_per_phase, phases=3):
     prims['rotor']['current']['out']['y'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='out'))
     prims['rotor']['current']['in']['z'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='in'))
     prims['rotor']['current']['out']['z'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='out'))
-    for phase in ('x', 'y', 'z'):
+    for phase in ('xyz'):
         for node in prims.filter_matching_keys('current', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = scale_rgb(cl[phase], contrast_color_scale)
+
+
+
+def create_fields(canvas: NormCanvas, prims: PrimitivesGroup):
+    prims['stator']['field'] = []
+    prims['stator']['field']['vec'] = []
+    for i, ph in enumerate(('abcs')):
+        prims['stator']['field']['vec'][ph] = GraphicVec2(0.4, 0.0, canvas, stroke=cl[ph], transforms=(rotate, 2 * pi / 3 * i), name='field_vec_' + ph)
+
+    prims['rotor']['field'] = []
+    prims['rotor']['field']['vec'] = []
+    for i, ph in enumerate(('xyzr')):
+        prims['rotor']['field']['vec'][ph] = GraphicVec2(0.4, 0.0, canvas, stroke=cl[ph], transforms=(rotate, 2 * pi / 3 * i), name='field_vec_' + ph)
+
+    prims['stator']['field']['lines'] = []
+    for i, ph in enumerate('abcs'):
+        prims['stator']['field']['lines'][ph] = create_flux_from_quarter(canvas, orientation=2 * pi / 3 * i, color=cl[ph])
+        prims['stator']['field']['lines'][ph].visible = False
+
+    prims['rotor']['field']['lines'] = []
+    for i, ph in enumerate('xyzr'):
+        prims['rotor']['field']['lines'][ph] = create_flux_from_quarter(canvas, orientation=2 * pi / 3 * i, color=cl[ph])
+        prims['rotor']['field']['lines'][ph].visible = False
+
+
+    prims['rotor']['field'].append(Primitive(canvas,'circle', (0.0, 0.0, 0.015), fill=cl['airgap'], stroke=cl['outline'], name='center'))
+
 
 def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: int, phases:int=3):
     prims['stator'] = []
@@ -67,7 +97,7 @@ def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: i
     prims['stator']['coil']['a'] = circular_pattern(canvas, ['stator_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 0))
     prims['stator']['coil']['b'] = circular_pattern(canvas, ['stator_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 1))
     prims['stator']['coil']['c'] = circular_pattern(canvas, ['stator_esp'], pattern=IndexFilter3ph(phases * coils_per_phase, 2))
-    for phase in ('a', 'b', 'c'):
+    for phase in 'abc':
         for node in prims.filter_matching_keys('coil', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = cl[phase]
@@ -81,7 +111,7 @@ def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: i
     prims['stator']['current']['out']['b'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='out'))
     prims['stator']['current']['in']['c'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='in'))
     prims['stator']['current']['out']['c'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='out'))
-    for phase in ('a', 'b', 'c'):
+    for phase in ('abc'):
         for node in prims.filter_matching_keys('current', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = scale_rgb(cl[phase], contrast_color_scale)
@@ -89,6 +119,29 @@ def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: i
     # prims['stator']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], pattern=ThreePhaseSkipIndexIterator(phases*coils_per_phase))
     # prims['stator']['coil_front'].stipple = 'gray50'
     # prims['stator']['coil_front'].fill = '#00ffaa'
+
+
+def create_flux_from_quarter(canvas, orientation=0.0, color: str | None = None):
+    orientation += pi
+    prims = [
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse, ), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, 1)), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, -1)), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse, ), (scale, (1, -1)), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse, ), (scale, {'factor': (0.8, 0.77), 'center': (0.0, -0.50571428571428571428571428571429)}    ), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, 1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, -1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse, ), (scale, (1, -1)), (scale, {'factor': (0.8, 0.77), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse, ), (scale, {'factor': (.65, .5), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, 1)), (scale, {'factor': (.65, .5), 'center': (0.0, -0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(scale, (-1, -1)), (scale, {'factor': (.65, .5), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+        (Primitive(canvas, **assets['quarter_flux'], transforms=[(reverse,), (scale, (1, -1)), (scale, {'factor': (.65, .5), 'center': (0.0, 0.50571428571428571428571428571429)}), (rotate, orientation)])),
+    ]
+    if color:
+        for p in prims:
+            p.stroke = color
+
+    return prims
 
 def circular_pattern(canvas,
                      assets_keys: str | list,
@@ -156,4 +209,6 @@ class IndexFilter3ph:
         self.i += inc
         self.returned += 1
         return ret
+
+
 

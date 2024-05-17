@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
 
 
-
-
 def main():
 
     WIDTH, HEIGHT = 700, 700
@@ -70,8 +68,8 @@ def main():
 
     anim = CustomAnim(canvas, widgets)
     anim.loop()
-    window.mainloop()
 
+    window.mainloop()
 
 if __name__ == '__main__':
     main()
