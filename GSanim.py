@@ -702,6 +702,7 @@ class CustomAnim(Animation):
 
             if collision_circle_point(self.prims['rotor']['core']['outer'][0], (x, y)):
                 self.prims['rotor'].toggle_visible()
+                # self.prims['rotor'].stipple = 'gray25'
             elif collision_circle_point(self.prims['stator']['core']['outer'][0], (x, y)):
                 self.prims['stator'].toggle_visible()
 
