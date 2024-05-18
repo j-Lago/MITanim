@@ -16,6 +16,9 @@ def mit_draw(canvas, prims, s_coils_per_phase, r_coils_per_phase):
     create_rotor(canvas, prims, r_coils_per_phase)
     create_fields(canvas, prims)
 
+    create_coil_front(canvas, prims, s_coils_per_phase, r_coils_per_phase)
+    create_current(canvas, prims, s_coils_per_phase, r_coils_per_phase)
+
 
 def create_rotor(canvas, prims, coils_per_phase, phases=3):
 
@@ -47,20 +50,33 @@ def create_rotor(canvas, prims, coils_per_phase, phases=3):
             node.fill = cl[phase]
 
 
+def create_current(canvas, prims, coils_per_phase_s, coils_per_phase_r, phases = 3):
     prims['rotor']['current'] = []
     prims['rotor']['current']['in'] = []
     prims['rotor']['current']['out'] = []
-    prims['rotor']['current']['in']['x'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=0, dir_filter='in'))
-    prims['rotor']['current']['out']['x'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=0, dir_filter='out'))
-    prims['rotor']['current']['in']['y'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='in'))
-    prims['rotor']['current']['out']['y'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='out'))
-    prims['rotor']['current']['in']['z'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='in'))
-    prims['rotor']['current']['out']['z'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='out'))
+    prims['rotor']['current']['in']['x'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=0, dir_filter='in'))
+    prims['rotor']['current']['out']['x'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=0, dir_filter='out'))
+    prims['rotor']['current']['in']['y'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=1, dir_filter='in'))
+    prims['rotor']['current']['out']['y'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=1, dir_filter='out'))
+    prims['rotor']['current']['in']['z'] = circular_pattern(canvas, ['in_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=2, dir_filter='in'))
+    prims['rotor']['current']['out']['z'] = circular_pattern(canvas, ['out_r'], pattern=IndexFilter3ph(phases * coils_per_phase_r, phase=2, dir_filter='out'))
     for phase in ('xyz'):
         for node in prims.filter_matching_keys('current', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = scale_rgb(cl[phase], contrast_color_scale)
-
+    prims['stator']['current'] = []
+    prims['stator']['current']['in'] = []
+    prims['stator']['current']['out'] = []
+    prims['stator']['current']['in']['a'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=0, dir_filter='in'))
+    prims['stator']['current']['out']['a'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=0, dir_filter='out'))
+    prims['stator']['current']['in']['b'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=1, dir_filter='in'))
+    prims['stator']['current']['out']['b'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=1, dir_filter='out'))
+    prims['stator']['current']['in']['c'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=2, dir_filter='in'))
+    prims['stator']['current']['out']['c'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase_s, phase=2, dir_filter='out'))
+    for phase in ('abc'):
+        for node in prims.filter_matching_keys('current', phase):
+            node.stroke = scale_rgb(cl[phase], contrast_color_scale)
+            node.fill = scale_rgb(cl[phase], contrast_color_scale)
 
 
 def create_fields(canvas: NormCanvas, prims: PrimitivesGroup):
@@ -87,6 +103,25 @@ def create_fields(canvas: NormCanvas, prims: PrimitivesGroup):
 
     prims['rotor']['field'].append(Primitive(canvas,'circle', (0.0, 0.0, 0.015), fill=cl['airgap'], stroke=cl['outline'], name='center'))
 
+
+def create_coil_front(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase_s: int, coils_per_phase_r:int, phases:int=3):
+    prims['rotor']['coil_front'] = []
+    prims['rotor']['coil_front']['x'] = circular_pattern(canvas, ['rotor_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_r // 2, phase=2, dir_filter='both'))
+    prims['rotor']['coil_front']['y'] = circular_pattern(canvas, ['rotor_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_r // 2, phase=0, dir_filter='both'))
+    prims['rotor']['coil_front']['z'] = circular_pattern(canvas, ['rotor_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_r // 2, phase=1, dir_filter='both'))
+    for ph in ('xyz'):
+        for node in prims['rotor'].filter_matching_keys('coil_front', ph):
+            node.fill = cl[ph]
+            node.stipple = 'gray75'
+
+    prims['stator']['coil_front'] = []
+    prims['stator']['coil_front']['a'] = circular_pattern(canvas, ['stator_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_s // 2, phase=2, dir_filter='both'))
+    prims['stator']['coil_front']['b'] = circular_pattern(canvas, ['stator_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_s // 2, phase=0, dir_filter='both'))
+    prims['stator']['coil_front']['c'] = circular_pattern(canvas, ['stator_esp_front'], pattern=IndexFilter3ph(phases * coils_per_phase_s // 2, phase=1, dir_filter='both'))
+    for ph in ('abc'):
+        for node in prims['stator'].filter_matching_keys('coil_front', ph):
+            node.fill = cl[ph]
+            node.stipple = 'gray75'
 
 def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: int, phases:int=3):
     prims['stator'] = []
@@ -117,24 +152,6 @@ def create_stator(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase: i
         for node in prims.filter_matching_keys('coil', phase):
             node.stroke = scale_rgb(cl[phase], contrast_color_scale)
             node.fill = cl[phase]
-
-    prims['stator']['current'] = []
-    prims['stator']['current']['in'] = []
-    prims['stator']['current']['out'] = []
-    prims['stator']['current']['in']['a'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=0, dir_filter='in'))
-    prims['stator']['current']['out']['a'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=0, dir_filter='out'))
-    prims['stator']['current']['in']['b'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='in'))
-    prims['stator']['current']['out']['b'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=1, dir_filter='out'))
-    prims['stator']['current']['in']['c'] = circular_pattern(canvas, ['in_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='in'))
-    prims['stator']['current']['out']['c'] = circular_pattern(canvas, ['out_s'], pattern=IndexFilter3ph(phases * coils_per_phase, phase=2, dir_filter='out'))
-    for phase in ('abc'):
-        for node in prims.filter_matching_keys('current', phase):
-            node.stroke = scale_rgb(cl[phase], contrast_color_scale)
-            node.fill = scale_rgb(cl[phase], contrast_color_scale)
-
-    # prims['stator']['coil_front'] = create_circular_pattern(canvas, ['stator_esp_front'], pattern=ThreePhaseSkipIndexIterator(phases*coils_per_phase))
-    # prims['stator']['coil_front'].stipple = 'gray50'
-    # prims['stator']['coil_front'].fill = '#00ffaa'
 
 
 def create_flux_from_quarter(canvas, orientation=0.0, color: str | None = None):

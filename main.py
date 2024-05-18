@@ -47,6 +47,8 @@ def main():
         'rotor_field_vec': tk.Checkbutton(controls, text='Rotor field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
         'stator_field_lines': tk.Checkbutton(controls, text='Stator field lines', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
         'stator_field_vec': tk.Checkbutton(controls, text='Stator field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
+        'stator_coil_front': tk.Checkbutton(controls, text='Stator coil front', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+        'rotor_coil_front': tk.Checkbutton(controls, text='Rotor coil front', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
         'figs': [fig0, fig1],
     }
 
@@ -61,10 +63,13 @@ def main():
     widgets['time_factor'].pack(anchor='w', fill='none', side='top', expand=0)
 
     widgets['sim_inertia'].pack(anchor='w', fill='none', side='bottom')
+    widgets['stator_coil_front'].pack(anchor='w', fill='none', side='bottom')
+    widgets['rotor_coil_front'].pack(anchor='w', fill='none', side='bottom')
     widgets['rotor_field_lines'].pack(anchor='w', fill='none', side='bottom')
-    widgets['rotor_field_vec'].pack(anchor='w', fill='none', side='bottom')
     widgets['stator_field_lines'].pack(anchor='w', fill='none', side='bottom')
+    widgets['rotor_field_vec'].pack(anchor='w', fill='none', side='bottom')
     widgets['stator_field_vec'].pack(anchor='w', fill='none', side='bottom')
+
 
     controls.pack(side='right')
     infos.pack(side='right')

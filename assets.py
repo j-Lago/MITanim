@@ -2,7 +2,7 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('Courier bold', 14),
+        'default': ('Courier new', 14),
         'fps': ('Poor Richard', 14),
     }
 
@@ -16,21 +16,21 @@ cl = {'bg': '#ffffff',
       'b': '#2a7db7',
       'c': '#00A859',
       's': '#773191',
-      'x': '#ED8663', #'#ff6347', #'#ff6699', #'#cc6633',
+      'x': '#FFB74D', #'#ff6347', #'#ff6699', #'#cc6633',
       'y': '#69C9D4', #'#0098DA', #'#7a7acc', #'#3366cc',
       'z': '#51CC90', #'#33a333', # '#3d995c', #'#33cc66',
       'r': '#FF6699',
-      'Fe': '#cccccc',
+      'Fe': '#D5DBDB',
       'shaft': '#777777',
       'nan': '#000000',
       'I1': '#3e86f0',
       'I2': '#ae7bb5',
       'Tind': '#13ab45',
-      'Tres': '#ff505f',
-      'ws_cursor': '#ff7777',
-      'wr_cursor': '#138D75',
+      'Tres': '#CB4335',
+      'wr_cursor': '#9B59B6',
+      'ws_cursor': '#99A3A4',
       'grid': '#3d3d3d',
-      'default_font': '#4c6ca8',
+      'default_font': '#1C2833',
       }
 
 w = 2

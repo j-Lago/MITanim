@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import DISABLED, NORMAL
 from cmath import polar, rect, phase
 import numpy as np
 from tkinter import messagebox
@@ -70,6 +71,9 @@ class CustomAnim(Animation):
         self.en_rotor_field_lines = BoolVar(False)
         self.en_rotor_field_vec = BoolVar(True)
 
+        self.en_stator_coil_front = BoolVar(False)
+        self.en_rotor_coil_front = BoolVar(False)
+
 
 
         # para média móvel da exibição do FPS
@@ -78,7 +82,7 @@ class CustomAnim(Animation):
         self.plot_downsample_factor = 2
 
         self.select_dynamic_color = CircularDict({'3phase': False, 'amplitude': True})
-        self.select_dynamic_color.key = 'amplitude'
+        self.select_dynamic_color.key = '3phase'
 
         self.select_ref = CircularDict({'stator': 0, 'rotor': 1, 'field': 2})
         self.select_mount = CircularDict({'normal': True, 'hidden': False})
@@ -97,6 +101,7 @@ class CustomAnim(Animation):
         self.select_power_unit = CircularDict({'W': 1.0, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
         self.select_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
+        self.select_coil_opacity = CircularDict({'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
 
         self.mit = MITsim(R1=14.7000 * 0.0,
                           X1=14.9862 * 0.0,
@@ -226,8 +231,13 @@ class CustomAnim(Animation):
             self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
 
             if self.select_dynamic_color.value:
+                self.prims['stator']['coil_front'].visible = False
+                self.prims['rotor']['coil_front'].visible = False
                 self.color_stator_coils(I1_abc)
                 self.color_rotor_coils(Ir_xyz)
+            else:
+                self.prims['stator']['coil_front'].visible = self.en_stator_coil_front
+                self.prims['rotor']['coil_front'].visible = self.en_rotor_coil_front
 
 
 
@@ -560,7 +570,7 @@ class CustomAnim(Animation):
         self._fs_inc = 0.0
         self._fg_inc = 0.0
         self._s_inc = 0.0
-        self.inertia = 0.01
+        self.inertia = 0.008
 
         if reset_and_stop:
             self.run = False
@@ -600,16 +610,20 @@ class CustomAnim(Animation):
 
             match var_name:
                 case 'fs':
-                    self._fs_inc = clip(self.fs + increment, v_min, v_max) - self.fs
+                    if self.run:
+                        self._fs_inc = clip(self.fs + increment, v_min, v_max) - self.fs
                 case 's':
-                    if self.fg < 0:
-                        increment = - increment
-                    self._s_inc = clip(self.s + increment, v_min, v_max) - self.s
+                    if self.run:
+                        if self.fg < 0:
+                            increment = - increment
+                        self._s_inc = clip(self.s + increment, v_min, v_max) - self.s
                 case 'fg':
-                    self._fg_inc = clip(self.fg + increment, v_min, v_max) - self.fg
+                    if self.run:
+                        self._fg_inc = clip(self.fg + increment, v_min, v_max) - self.fg
                 case 'Tres':
-                    self.mit.k0 = clip(self.mit.k0 + increment, v_min, v_max)
-                    self.mit.k2 = clip(self.mit.k2 + increment*0.00001, v_min*0.00001, v_max*0.00001)
+                    if self.run:
+                        self.mit.k0 = clip(self.mit.k0 + increment, v_min, v_max)
+                        self.mit.k2 = clip(self.mit.k2 + increment*0.00001, v_min*0.00001, v_max*0.00001)
 
                 case 'delay':
                     self.frame_delay = int(clip(self.frame_delay + increment, v_min, v_max))
@@ -635,8 +649,15 @@ class CustomAnim(Animation):
 
         def reset_colors():
             next(self.select_dynamic_color)
-            print(f'{self.select_dynamic_color.value}, {self.select_dynamic_color.key}')
             if not self.select_dynamic_color.value:
+                self.widgets['stator_coil_front'].config(state=tk.NORMAL)
+                self.widgets['rotor_coil_front'].config(state=tk.NORMAL)
+                # del self.en_stator_coil_front
+                # del self.en_rotor_coil_front
+                self.en_stator_coil_front = BoolVar(False)
+                self.en_rotor_coil_front = BoolVar(False)
+                self.widgets['stator_coil_front'].configure(variable=self.en_stator_coil_front)
+                self.widgets['rotor_coil_front'].configure(variable=self.en_rotor_coil_front)
                 for ph in 'abc':
                     for direction in ('in', 'out'):
                         self.prims['stator']['coil'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
@@ -652,9 +673,23 @@ class CustomAnim(Animation):
                         for direction in ('in', 'out'):
                             self.prims['rotor']['current'][direction][ph].fill = scale_rgb(cl[ph], contrast_color_scale)
                             self.prims['rotor']['current'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
+            else:
+                self.en_stator_coil_front = False
+                self.en_rotor_coil_front = False
+                self.widgets['stator_coil_front'].config(state=tk.DISABLED)
+                self.widgets['rotor_coil_front'].config(state=tk.DISABLED)
 
 
-                print('estive aqui')
+        def change_coil_opacity():
+            next(self.select_coil_opacity)
+            for ph in ('xyz'):
+                for node in self.prims['rotor'].filter_matching_keys('coil_front', ph):
+                    node.fill = cl[ph]
+                    node.stipple = self.select_coil_opacity.key
+            for ph in ('abc'):
+                for node in self.prims['stator'].filter_matching_keys('coil_front', ph):
+                    node.fill = cl[ph]
+                    node.stipple = self.select_coil_opacity.key
 
 
 
@@ -692,6 +727,8 @@ class CustomAnim(Animation):
 
         self.canvas.window.bind('m', lambda event: change_slots('stator'))
         self.canvas.window.bind('n', lambda event: change_slots('rotor'))
+        self.canvas.window.bind('o', lambda event: change_coil_opacity())
+
         # self.canvas.window.bind('d', lambda event: self.destroy())
         # self.canvas.window.bind('c', lambda event: self.create())
         self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.select_fig0), self.invalidate_fig0_data()})
@@ -713,3 +750,5 @@ class CustomAnim(Animation):
         self.widgets['stator_field_vec'].configure(variable=self.en_stator_field_vec)
         self.widgets['rotor_field_lines'].configure(variable=self.en_rotor_field_lines)
         self.widgets['rotor_field_vec'].configure(variable=self.en_rotor_field_vec)
+        self.widgets['stator_coil_front'].configure(variable=self.en_stator_coil_front)
+        self.widgets['rotor_coil_front'].configure(variable=self.en_rotor_coil_front)
