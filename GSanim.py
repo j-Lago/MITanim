@@ -204,7 +204,7 @@ class CustomAnim(Animation):
             self.mit.f = self.fg
             self.mit.solve()
 
-            th_er = self.thg - self.thr - pi
+            th_er = self.thg - self.thr + self.ths - pi
             V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - self.ths - i * 2 * pi / 3) for i in range(3))
             Im_abc = tuple(abs(self.mit.Im) * sin(self.thg - self.ths+ phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
             I1_abc = tuple(abs(self.mit.I1) * sin(self.thg - self.ths+ phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
