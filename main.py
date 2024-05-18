@@ -16,7 +16,7 @@ def main():
     WIDTH, HEIGHT = 700, 700
 
     window = tk.Tk()
-    window.title("Motor de Indução Trifásico")
+    window.title("Lab. Virtual de Máquinas Elétricas: Motor de Indução Trifásico")
     window.configure(background=cl['bg'])
     canvas = NormCanvas(window, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
 
@@ -24,16 +24,18 @@ def main():
     fig1, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
 
 
-    infos = tk.Frame(window, bg=cl['bg'])
-    controls = tk.Frame(window, bg=cl['bg'])
+    frames = tk.Frame(window, bg=cl['bg'])
+    infos = tk.Frame(frames, bg=cl['bg'])
+    plots = tk.Frame(frames, bg=cl['bg'])
+    controls = tk.Frame(frames, bg=cl['bg'])
 
     # teste = tk.Checkbutton(controls, text='Use Metric')
     # teste.state()
 
     widgets = {
         'fps': tk.Label(window, text='fps:', font=fonts['fps'], fg='#bb5533', bg=cl['bg']),
-        'canvas_fig0': FigureCanvasTkAgg(fig0, master=infos),
-        'canvas_fig1': FigureCanvasTkAgg(fig1, master=infos),
+        'canvas_fig0': FigureCanvasTkAgg(fig0, master=plots),
+        'canvas_fig1': FigureCanvasTkAgg(fig1, master=plots),
 
         'w_stator': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
         'w_rotor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
@@ -70,8 +72,9 @@ def main():
     widgets['rotor_field_vec'].pack(anchor='w', fill='none', side='bottom')
     widgets['stator_field_vec'].pack(anchor='w', fill='none', side='bottom')
 
-
-    controls.pack(side='right')
+    plots.pack(side='top')
+    frames.pack(side='left')
+    controls.pack(side='left')
     infos.pack(side='right')
 
     canvas.pack()

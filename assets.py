@@ -2,7 +2,7 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('Courier new', 14),
+        'default': ('Courier new', 12),
         'fps': ('Poor Richard', 14),
     }
 

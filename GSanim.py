@@ -19,13 +19,11 @@ import matplotlib.pyplot as plt
 from custom_graphics import mit_draw, circular_pattern, IndexFilter3ph, create_stator
 from threading import Thread, Event
 
-
-
 def plot_thread(event_redraw: Event, figs):
     while True:
-        event_redraw.wait(.2)
+        event_redraw.wait()
         for fig in figs:
-            # fig.axes.clear()
+            fig.axes.clear()
             fig.canvas.draw()
         event_redraw.clear()
 
@@ -79,7 +77,7 @@ class CustomAnim(Animation):
         # para média móvel da exibição do FPS
         self.dt_filter_buffer = deque(maxlen=100)
         self.dc_filter_buffer = deque(maxlen=100)
-        self.plot_downsample_factor = 2
+        self.plot_downsample_factor = 3
 
         self.select_dynamic_color = CircularDict({'3phase': False, 'amplitude': True})
         self.select_dynamic_color.key = '3phase'
@@ -116,9 +114,10 @@ class CustomAnim(Animation):
 
 
         # para plots
-        self.ax_npt = 150
-        self.plt_t = deque(maxlen=self.ax_npt)
-        self.plt_y = (deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt), deque(maxlen=self.ax_npt))
+        self.ax_npt_fig0 = 100
+        self.ax_npt_fig1 = 50
+        self.plt_t = deque(maxlen=self.ax_npt_fig0)
+        self.plt_y = (deque(maxlen=self.ax_npt_fig0), deque(maxlen=self.ax_npt_fig0), deque(maxlen=self.ax_npt_fig0))
         self.plot_fig0()
         self.plot_fig1()
 
@@ -149,7 +148,7 @@ class CustomAnim(Animation):
         ax.axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
 
 
-        self.plt_t.extend(np.linspace(-0.04, 0.00, self.ax_npt))
+        self.plt_t.extend(np.linspace(-0.04, 0.00, self.ax_npt_fig0))
         self.invalidate_fig0_data(self.time_factor)
 
         ax.set_ylim(-1.2, 1.2)
@@ -170,128 +169,128 @@ class CustomAnim(Animation):
         ax.axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
         ax.axvline(0, linestyle='--', color=cl['grid'], linewidth=1)
 
-        wmax = nmax * pi / 30.0
-        self.mit.V1 = 1.0 * self.mit.V1nom
-        self.mit.f = self.fg
-        mit_curves = self.mit.solve_range(-wmax*0.05, wmax, self.ax_npt, ['I1', 'Tind'])
-        y1s = abs(mit_curves['I1'])
-        y0s = mit_curves['Tind']
-        nrs = mit_curves['nr']
+        # wmax = nmax * pi / 30.0
+        # self.mit.V1 = 1.0 * self.mit.V1nom
+        # self.mit.f = self.fg
+        # mit_curves = self.mit.solve_range(-wmax * 0.05, wmax, self.ax_npt_fig1, ['I1', 'Tind'])
+        # y1s = abs(mit_curves['I1'])
+        # y0s = mit_curves['Tind']
+        # nrs = mit_curves['nr']
+        #
+        # self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
+        # self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
+        # self.mit.f = self.fg
+        # self.mit.solve()
 
-        self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
-        self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
-        self.mit.f = self.fg
-        self.mit.solve()
+        # self.plt_lines['ws_cursor'] = ax.axvline(self.mit.ns, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
+        # self.plt_lines['wr_cursor'] = ax.axvline(self.mit.nr, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
+        # self.plt_lines['Tind'] = (ax.plot(nrs, y0s, color=cl['Tind'], lw=2))[0]
+        # self.plt_lines['Ix'] = (ax.plot(nrs, y1s, color=cl['I1'], lw=2))[0]
+        # self.plt_lines['Tind_marker'] = (ax.plot(self.mit.nr, self.mit.Tind, color=cl['Tind'], marker='o', markersize=marker_size, lw=2))[0]
+        # self.plt_lines['Ix_marker'] = (ax.plot(self.mit.nr, self.mit.I1, color=cl['I1'], marker='o', markersize=marker_size, lw=2))[0]
+        # ax.set_xlim(min(nrs), max(nrs))
 
-        self.plt_lines['ws_cursor'] = ax.axvline(self.mit.ns, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
-        self.plt_lines['wr_cursor'] = ax.axvline(self.mit.nr, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
-        self.plt_lines['Tind'] = (ax.plot(nrs, y0s, color=cl['Tind'], lw=2))[0]
-        self.plt_lines['Ix'] = (ax.plot(nrs, y1s, color=cl['I1'], lw=2))[0]
-        self.plt_lines['Tind_marker'] = (ax.plot(self.mit.nr, self.mit.Tind, color=cl['Tind'], marker='o', markersize=marker_size, lw=2))[0]
-        self.plt_lines['Ix_marker'] = (ax.plot(self.mit.nr, self.mit.I1, color=cl['I1'], marker='o', markersize=marker_size, lw=2))[0]
-        ax.set_xlim(min(nrs), max(nrs))
+        self.plt_lines['ws_cursor'] = ax.axvline(0, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
+        self.plt_lines['wr_cursor'] = ax.axvline(0, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
+        self.plt_lines['Tind'] = (ax.plot(0, 0, color=cl['Tind'], lw=2))[0]
+        self.plt_lines['Ix'] = (ax.plot(0, 0, color=cl['I1'], lw=2))[0]
+        self.plt_lines['Tind_marker'] = (ax.plot(0, 0, color=cl['Tind'], marker='o', markersize=marker_size, lw=2))[0]
+        self.plt_lines['Ix_marker'] = (ax.plot(0,0, color=cl['I1'], marker='o', markersize=marker_size, lw=2))[0]
+
 
 
 
 
     def refresh(self, _, dt, frame_count):
-            self.update_fps_info(dt)
+        self.update_fps_info(dt)
 
-            dt /= self.time_factor     # time scaled dt for animation
-            redraw_plt = frame_count % self.plot_downsample_factor == 0
+        redraw_plt = frame_count % self.plot_downsample_factor == 0
 
-            if redraw_plt and self.run:
-                self.update_fig1()
+        dt /= self.time_factor     # time scaled dt for animation
 
-            # plot resample
-            self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
-            self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
-            self.mit.f = self.fg
-            self.mit.solve()
+        if redraw_plt and self.run:
+            self.update_fig1()
 
-            th_er = self.thg - self.thr - pi
-            alpha = 2 * pi / 3
-            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg  - i * alpha) for i in range(3))
-            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * alpha) for i in range(3))
-            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * alpha) for i in range(3))
-            Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * alpha) for i in range(3))
+        # plot resample
+        self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
+        self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
+        self.mit.f = self.fg
+        self.mit.solve()
 
-            mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
+        th_er = self.thg - self.thr - pi
+        alpha = 2 * pi / 3
+        V1_abc = tuple(abs(self.mit.V1) * sin(self.thg  - i * alpha) for i in range(3))
+        Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * alpha) for i in range(3))
+        I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * alpha) for i in range(3))
+        Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * alpha) for i in range(3))
 
-
-            if redraw_plt and self.run:
-                self.update_fig0(mit_t)
-
-            self.update_fields(mit_t)
-
-            self.prims['rotor'].rotate(self.thr)
-            self.prims['stator'].rotate(self.ths)
-
-            self.prims['stator']['core']['mount'].visible = self.select_mount.value and self.prims['stator']['core']['mount'].parent_visible
-            # self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
-            # self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
-
-            if self.select_dynamic_color.value:
-                self.prims['stator']['coil_front'].visible = False
-                self.prims['rotor']['coil_front'].visible = False
-                self.color_stator_coils(I1_abc)
-                self.color_rotor_coils(Ir_xyz)
-            else:
-                self.prims['stator']['coil_front'].visible = self.en_stator_coil_front
-                self.prims['rotor']['coil_front'].visible = self.en_rotor_coil_front
+        mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
 
 
+        if redraw_plt and self.run:
+            self.update_fig0(mit_t)
+
+        self.update_fields(mit_t)
+
+        self.prims['rotor'].rotate(self.thr)
+        self.prims['stator'].rotate(self.ths)
+
+        self.prims['stator']['core']['mount'].visible = self.select_mount.value and self.prims['stator']['core']['mount'].parent_visible
+        # self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
+        # self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
+
+        if self.select_dynamic_color.value:
+            self.prims['stator']['coil_front'].visible = False
+            self.prims['rotor']['coil_front'].visible = False
+            self.color_stator_coils(I1_abc)
+            self.color_rotor_coils(Ir_xyz)
+        else:
+            self.prims['stator']['coil_front'].visible = self.en_stator_coil_front
+            self.prims['rotor']['coil_front'].visible = self.en_rotor_coil_front
 
 
-            self.prims.draw()
+        self.prims.draw()
+        if redraw_plt:
+            if not self.thread_figs_redraw.is_set():
+                self.thread_figs_redraw.set()
+            for fig in self.widgets['figs']:
+                fig.canvas.flush_events()
 
-
-
-
+        if self.run:
             self.fs += self._fs_inc
             self._fs_inc = 0.0
-
             self.fg += self._fg_inc
             self._fg_inc = 0.0
 
-            if self.en_sim_inertia:
-                DT = (self.mit.Tind - self.mit.Tres)
-                fr = (1.0-self.s) * self.fg
-                fr += DT*dt / self.inertia
-                self.s = (self.fg - fr) / self.fg if self.fg != 0 else 0.0
-                self.s = clip(self.s, -0.2, 1.2)
-                self._s_inc = 0.0
-            else:
-                self.s += self._s_inc
-                self._s_inc = 0.0
+        if self.en_sim_inertia:
+            DT = (self.mit.Tind - self.mit.Tres)
+            fr = (1.0-self.s) * self.fg
+            fr += DT*dt / self.inertia
+            self.s = (self.fg - fr) / self.fg if self.fg != 0 else 0.0
+            self.s = clip(self.s, -0.2, 1.2)
+            self._s_inc = 0.0
+        else:
+            self.s += self._s_inc
+            self._s_inc = 0.0
 
-            if self.run:
-                self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
-                self.thr = (self.thr + dt * (1.0-self.s) * self.fg * 2 * pi) % (2 * pi)
-                self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
-                self.t += dt
+        if self.run:
+            self.ths = (self.ths + dt * self.fs * 2 * pi) % (2 * pi)
+            self.thr = (self.thr + dt * (1.0-self.s) * self.fg * 2 * pi) % (2 * pi)
+            self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
+            self.t += dt
 
-                match self.select_ref.key:
-                    case 'stator':
-                        pass
-                    case 'rotor':
-                        self.ths -= self.thr
-                        self.thg = 0.0
-                    case 'field':
-                        self.ths -= self.thg
-                        self.thg -= 0
+            match self.select_ref.key:
+                case 'stator':
+                    pass
+                case 'rotor':
+                    self.ths -= self.thr
+                    self.thg = 0.0
+                case 'field':
+                    self.ths -= self.thg
+                    self.thg -= 0
+                case _: raise ValueError('assert')
 
-
-                    case _: raise ValueError('assert')
-
-            if redraw_plt:
-                # self.thread_fig0_redraw.set()
-                # self.thread_fig1_redraw.set()
-                self.thread_figs_redraw.set()
-                for fig in self.widgets['figs']:
-                    fig.canvas.flush_events()
-
-            self.update_info()
+        self.update_info()
 
     # ------------------------------- end of refresh -------------------------------------
 
@@ -420,9 +419,10 @@ class CustomAnim(Animation):
             self.plt_lines[('abc')[i] + '_marker'].set_xdata((self.plt_t[-1],))
             self.plt_lines[('abc')[i]].set_color(cl[ph])
             self.plt_lines[('abc')[i] + '_marker'].set_color(cl[ph])
-        pad = 0.1 / self.time_factor
+        pad = 0.05 / self.time_factor * self.plot_downsample_factor
         t_max = max(self.plt_t)
         t_min = min(self.plt_t)
+        # t_min = t_max -.01
         y_max = self.select_fig0.value
         ax.set_xlim(t_min + pad, t_max + pad)
         ax.set_ylim(-y_max, y_max)
@@ -462,7 +462,7 @@ class CustomAnim(Animation):
         self.mit.f = self.fg
         self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
 
-        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt, [self.select_fig1.key, 'Tind'])
+        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt_fig1, [self.select_fig1.key, 'Tind'])
         Xs = abs(mit_curves[self.select_fig1.key]) if self.select_fig1.key[0] == 'I' else mit_curves[self.select_fig1.key]
         Tinds = mit_curves['Tind']
         nrs = mit_curves['nr']
@@ -586,7 +586,7 @@ class CustomAnim(Animation):
         for k in range(len(self.plt_t)):
             self.plt_t[k] = (self.plt_t[k] - t_max) * previous_time_factor / self.time_factor + t_max
 
-        nans = np.empty(self.ax_npt, float)
+        nans = np.empty(self.ax_npt_fig0, float)
         nans.fill(np.nan)
         for arr in (self.plt_y):
             arr.extend(nans)
@@ -604,7 +604,7 @@ class CustomAnim(Animation):
         def toggle_run():
             self.run = not self.run
 
-        def inc_value(var_name: Literal['fs', 'fr', 'delay', 'time_factor'],
+        def inc_value(var_name: Literal['fg', 'fs', 's', 'delay', 'time_factor', 'Tres'],
                       increment: int | float,
                       v_min: int | float,
                       v_max: int | float):
