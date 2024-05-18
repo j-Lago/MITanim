@@ -23,16 +23,16 @@ def scale(coords: Coords, factor: Numeric | Point, center: Point = (0, 0)) -> Co
 
     if len(coords) == 3:
         return input_type(((coords[0]-center[0])*factor+center[0], (coords[1]-center[1])*factor+center[1], coords[2]*factor))
+        # return input_type((coords[0], coords[1], coords[2]*factor))
     else:
         if isinstance(factor, float | int):
             # print(factor)
             factor = (factor, factor)
-        return input_type(factor[i_xy := i % 2] * (v-center[i % 2]) + center[i_xy] for i, v in enumerate(coords))
+        return input_type(factor[i_xy := i % 2] * (v-center[i_xy]) + center[i_xy] for i, v in enumerate(coords))
 
 
 def reverse(coords: Coords) -> Coords:
     input_type = type(coords)
-
     original = copy(coords)
     L = len(original)//2
     pairs = (zip(coords[::2], coords[1::2]))  # (x0, y0, x1, y1, ...) -> ((x0, y0), (x1, y1), ...)
@@ -164,3 +164,31 @@ class CircularDict(dict):
         keys = list(self.keys())
         self._current_key = keys[(keys.index(self._current_key) + 1) % len(keys)]
         return self._current_key
+
+
+
+def lerp(a, b, t):
+    return a+(b-a)*t
+
+
+def rgb_lerp(c0, c1, t):
+    return tuple( lerp(a, b, t) for a, b in zip(c0, c1) )
+
+
+def hex_lerp(c0: str, c1: str, t):
+    c0 = hex_to_rgb(c0)
+    c1 = hex_to_rgb(c1)
+    return rgb_to_hex(rgb_lerp(c0, c1, t))
+
+
+def rgb_bezier(c0, c1, c2, t):
+    c01 = rgb_lerp(c0, c1, t)
+    c12 = rgb_lerp(c1, c2, t)
+    return rgb_lerp(c01, c12, t)
+
+
+def hex_bezier(c0: str, c1: str, c2: str,  t):
+    c0 = hex_to_rgb(c0)
+    c1 = hex_to_rgb(c1)
+    c2 = hex_to_rgb(c2)
+    return rgb_to_hex(rgb_bezier(c0, c1, c2, t))

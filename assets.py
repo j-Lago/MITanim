@@ -61,10 +61,10 @@ assets = {
     'keyway_outline':        {'shape': 'line',      'fill': '',           'stroke': cl['outline'], 'width': w, 'coords': (-k[0], s+ko, -k[0], -k[1]+s, k[0], -k[1]+s, k[0], s+ko)},
     'mount':                 {'shape': 'polygon',   'fill': cl['Fe'],     'stroke': cl['outline'], 'width': w, 'coords': (.52, -.65, .7, -.98, .35, -.98, .25, -.7)},
     'vec':                   {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': w, 'joinstyle': 'round', 'capstyle': 'round', 'arrow': 'last', 'arrowshape': (18, 20, 6), 'coords': (0.0, 0.0, 0.4, 0.0)},
-    'out_s':                 {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'joinstyle': 'round', 'capstyle': 'round', 'coords': (-0.04, -0.04+esp_sc, 0.04, 0.04+esp_sc, 0.0, 0.0+esp_sc, -0.04, 0.04+esp_sc, 0.04, -0.04+esp_sc)},
-    'in_s':                  {'shape': 'circle',    'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'coords': (0, esp_sc, 0.012)},
-    'out_r':                 {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'joinstyle': 'round', 'capstyle': 'round', 'coords': (-0.04, -0.04+esp_rc, 0.04, 0.04+esp_rc, 0.0, 0.0+esp_rc, -0.04, 0.04+esp_rc, 0.04, -0.04+esp_rc)},
-    'in_r':                  {'shape': 'circle',    'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'coords': (0, esp_rc, 0.012)},
+    'in_s':                  {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'joinstyle': 'round', 'capstyle': 'round', 'coords': (-0.04, -0.04+esp_sc, 0.04, 0.04+esp_sc, 0.0, 0.0+esp_sc, -0.04, 0.04+esp_sc, 0.04, -0.04+esp_sc), 'anchor': (0.0, 0.0+esp_sc)},
+    'out_s':                 {'shape': 'circle',    'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'coords': (0, esp_sc, 0.012), 'anchor': (0, esp_sc)},
+    'in_r':                  {'shape': 'line',      'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'joinstyle': 'round', 'capstyle': 'round', 'coords': (-0.04, -0.04+esp_rc, 0.04, 0.04+esp_rc, 0.0, 0.0+esp_rc, -0.04, 0.04+esp_rc, 0.04, -0.04+esp_rc), 'anchor': (0.0, 0.0+esp_rc)},
+    'out_r':                 {'shape': 'circle',    'fill': '#000000',    'stroke': '#000000',     'width': 2*w, 'coords': (0, esp_rc, 0.012), 'anchor': (0, esp_rc)},
 }
 
 

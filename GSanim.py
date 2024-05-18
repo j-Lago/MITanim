@@ -5,9 +5,9 @@ from tkinter import messagebox
 from math import sin, cos, pi, atan2, sqrt, fabs
 from NormCanvas import NormCanvas, BoolVar
 from primitive import Primitive, PrimitivesGroup
-from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip, CircularDict
+from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip, CircularDict, hex_bezier, scale_rgb
 import time
-from assets import assets, cl, binds_message
+from assets import assets, cl, binds_message, contrast_color_scale
 from animation import Animation
 from collections import deque
 from statistics import mean
@@ -15,8 +15,9 @@ from typing import Literal
 from MITsim import MITsim
 from gvec import GraphicVec2
 import matplotlib.pyplot as plt
-from custom_graphics import synchronous_generator_draw, circular_pattern, IndexFilter3ph, create_stator
+from custom_graphics import mit_draw, circular_pattern, IndexFilter3ph, create_stator
 from threading import Thread, Event
+
 
 
 def plot_thread(event_redraw: Event, figs):
@@ -67,7 +68,7 @@ class CustomAnim(Animation):
         self.en_stator_field_lines = BoolVar(False)
         self.en_stator_field_vec = BoolVar(True)
         self.en_rotor_field_lines = BoolVar(False)
-        self.en_rotor_field_vec = BoolVar(False)
+        self.en_rotor_field_vec = BoolVar(True)
 
 
 
@@ -76,13 +77,22 @@ class CustomAnim(Animation):
         self.dc_filter_buffer = deque(maxlen=100)
         self.plot_downsample_factor = 2
 
-        self.stator_field_show = CircularDict({'abc': 0, 'abcs': 1, 'a': 2, 'b': 3, 'c': 4, 's': 5})
-        self.rotor_field_show = CircularDict({'xyz': 0, 'xyzr': 1, 'x': 2, 'y': 3, 'z': 4, 'r': 5})
+        self.select_dynamic_color = CircularDict({'3phase': False, 'amplitude': True})
+        self.select_dynamic_color.key = 'amplitude'
 
-        self.fig1_show = CircularDict({ 'nan': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
-        self.fig1_show.key = 'Tres'
+        self.select_ref = CircularDict({'stator': 0, 'rotor': 1, 'field': 2})
+        self.select_mount = CircularDict({'normal': True, 'hidden': False})
+        self.select_part = CircularDict({'all': 0, 'stator': 1, 'rotor': 2})
+        self.select_stator_field = CircularDict({'abc': 0, 'abcs': 1, 'a': 2, 'b': 3, 'c': 4, 's': 5})
+        self.select_stator_field.key = 's'
 
-        self.fig0_show = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
+        self.select_rotor_field = CircularDict({'xyz': 0, 'xyzr': 1, 'x': 2, 'y': 3, 'z': 4, 'r': 5})
+        self.select_rotor_field.key = 'r'
+
+        self.select_fig1 = CircularDict({'nan': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
+        self.select_fig1.key = 'Tres'
+
+        self.select_fig0 = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
         self.select_speed_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
         self.select_power_unit = CircularDict({'W': 1.0, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
@@ -110,7 +120,8 @@ class CustomAnim(Animation):
         self.prims = PrimitivesGroup('root', [])
         self.create()
 
-        self.prims.draw(consolidate_transforms_to_original=True)
+
+
 
         self.binds()
 
@@ -194,9 +205,9 @@ class CustomAnim(Animation):
             self.mit.solve()
 
             th_er = self.thg - self.thr - pi
-            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - i * 2 * pi / 3) for i in range(3))
-            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
-            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
+            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - self.ths - i * 2 * pi / 3) for i in range(3))
+            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg - self.ths+ phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
+            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg - self.ths+ phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
             Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * 2 * pi / 3) for i in range(3))
 
             mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
@@ -209,6 +220,17 @@ class CustomAnim(Animation):
 
             self.prims['rotor'].rotate(self.thr)
             self.prims['stator'].rotate(self.ths)
+
+            self.prims['stator']['core']['mount'].visible = self.select_mount.value
+            self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
+            self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
+
+            if self.select_dynamic_color.value:
+                self.color_stator_coils(I1_abc)
+                self.color_rotor_coils(Ir_xyz)
+
+
+
 
             self.prims.draw()
 
@@ -238,6 +260,19 @@ class CustomAnim(Animation):
                 self.thg = (self.thg + dt * self.fg * 2 * pi) % (2 * pi)
                 self.t += dt
 
+                match self.select_ref.key:
+                    case 'stator':
+                        pass
+                    case 'rotor':
+                        self.ths -= self.thr
+                        self.thg = 0.0
+                    case 'field':
+                        self.ths -= self.thg
+                        self.thg -= 0
+
+
+                    case _: raise ValueError('assert')
+
             if redraw_plt:
                 # self.thread_fig0_redraw.set()
                 # self.thread_fig1_redraw.set()
@@ -246,7 +281,76 @@ class CustomAnim(Animation):
                     fig.canvas.flush_events()
 
             self.update_info()
+
     # ------------------------------- end of refresh -------------------------------------
+
+    def color_stator_coils(self, I1_abc):
+        if self.select_dynamic_color.value:
+            for i, ph in enumerate('abc'):
+                amp = clip(I1_abc[i] * 0.33, -1.0, 1.0)
+                tp = fabs(amp)
+                tn = fabs(-amp)
+                clp = hex_bezier('#ff6600', '#aaffaa', '#0066ff', amp * 0.5 + 0.5)
+                cln = hex_bezier('#ff6600', '#aaffaa', '#0066ff', -amp * 0.5 + 0.5)
+
+                if amp < 0:
+                    clp, cln = cln, clp
+                    tp, tn = tn, tp
+
+                self.prims['stator']['coil']['in'][ph].fill = clp
+                self.prims['stator']['coil']['in'][ph].stroke = clp
+                self.prims['stator']['coil']['out'][ph].fill = cln
+                self.prims['stator']['coil']['out'][ph].stroke = cln
+
+                self.prims['stator']['current']['in'][ph].stroke = scale_rgb(clp, contrast_color_scale)
+                self.prims['stator']['current']['in'][ph].fill = scale_rgb(clp, contrast_color_scale)
+                self.prims['stator']['current']['out'][ph].stroke = scale_rgb(cln, contrast_color_scale)
+                self.prims['stator']['current']['out'][ph].fill = scale_rgb(cln, contrast_color_scale)
+
+                for j, _ in enumerate(self.prims['stator']['current']['in'][ph]):
+                    self.prims['stator']['current']['in'][ph][j].scale(tp, center=self.prims['stator']['current']['in'][ph][j].anchor)
+                    self.prims['stator']['current']['out'][ph][j].scale(tn, center=self.prims['stator']['current']['out'][ph][j].anchor)
+
+                if amp < 0:
+                    self.prims['stator']['current']['in'][ph].rotate(pi)
+                    self.prims['stator']['current']['out'][ph].rotate(pi)
+                    self.prims['stator']['coil']['in'][ph].rotate(pi)
+                    self.prims['stator']['coil']['out'][ph].rotate(pi)
+
+
+    def color_rotor_coils(self, Ir_xyz):
+        for i, ph in enumerate('xyz'):
+            amp = clip(Ir_xyz[i] / self.mit.Ns_Nr * 0.33, -1.0, 1.0)
+            tp = fabs(amp)
+            tn = fabs(-amp)
+            clp = hex_bezier('#ff6600', '#aaffaa', '#0066ff', amp * 0.5 + 0.5)
+            cln = hex_bezier('#ff6600', '#aaffaa', '#0066ff', -amp * 0.5 + 0.5)
+
+            if amp < 0:
+                clp, cln = cln, clp
+                tp, tn = tn, tp
+
+            self.prims['rotor']['coil']['in'][ph].fill = clp
+            self.prims['rotor']['coil']['in'][ph].stroke = clp
+            self.prims['rotor']['coil']['out'][ph].fill = cln
+            self.prims['rotor']['coil']['out'][ph].stroke = cln
+
+            self.prims['rotor']['current']['in'][ph].stroke = scale_rgb(clp, contrast_color_scale)
+            self.prims['rotor']['current']['in'][ph].fill = scale_rgb(clp, contrast_color_scale)
+            self.prims['rotor']['current']['out'][ph].stroke = scale_rgb(cln, contrast_color_scale)
+            self.prims['rotor']['current']['out'][ph].fill = scale_rgb(cln, contrast_color_scale)
+
+            for j, _ in enumerate(self.prims['rotor']['current']['in'][ph]):
+                self.prims['rotor']['current']['in'][ph][j].scale(tp, center=self.prims['rotor']['current']['in'][ph][j].anchor)
+                self.prims['rotor']['current']['out'][ph][j].scale(tn, center=self.prims['rotor']['current']['out'][ph][j].anchor)
+
+            if amp < 0:
+                self.prims['rotor']['current']['in'][ph].rotate(pi)
+                self.prims['rotor']['current']['out'][ph].rotate(pi)
+                self.prims['rotor']['coil']['in'][ph].rotate(pi)
+                self.prims['rotor']['coil']['out'][ph].rotate(pi)
+
+
 
     def update_fields(self, mit_t):
 
@@ -278,26 +382,26 @@ class CustomAnim(Animation):
 
 
         for ph in 'abcs':
-            self.prims['stator']['field']['vec'][ph].visible = self.en_stator_field_vec and (ph in self.stator_field_show.key)
+            self.prims['stator']['field']['vec'][ph].visible = self.en_stator_field_vec and (ph in self.select_stator_field.key)
 
         for ph in 'xyzr':
-            self.prims['rotor']['field']['vec'][ph].visible = self.en_rotor_field_vec and (ph in self.rotor_field_show.key)
+            self.prims['rotor']['field']['vec'][ph].visible = self.en_rotor_field_vec and (ph in self.select_rotor_field.key)
 
         for ph in 'abcs':
-            self.prims['stator']['field']['lines'][ph].visible = self.en_stator_field_lines and (ph in self.stator_field_show.key)
+            self.prims['stator']['field']['lines'][ph].visible = self.en_stator_field_lines and (ph in self.select_stator_field.key)
 
 
         for ph in 'xyzr':
-            self.prims['rotor']['field']['lines'][ph].visible = self.en_rotor_field_lines and (ph in self.rotor_field_show.key)
+            self.prims['rotor']['field']['lines'][ph].visible = self.en_rotor_field_lines and (ph in self.select_rotor_field.key)
 
 
 
     def update_fig0(self, mit_t):
         ax = self.widgets['figs'][0].axes[0]
-        Y_show = mit_t[self.fig0_show.key]
+        Y_show = mit_t[self.select_fig0.key]
 
         self.plt_t.append(self.t)
-        for i, ph in enumerate(self.fig0_show.key[3:6]):
+        for i, ph in enumerate(self.select_fig0.key[3:6]):
             self.plt_y[i].append(Y_show[i])    #amp * sin(self.thg + phi + alpha * i))
             self.plt_lines[('abc')[i]].set_ydata(self.plt_y[i])
             self.plt_lines[('abc')[i]].set_xdata(self.plt_t)
@@ -308,10 +412,10 @@ class CustomAnim(Animation):
         pad = 0.1 / self.time_factor
         t_max = max(self.plt_t)
         t_min = min(self.plt_t)
-        y_max = self.fig0_show.value
+        y_max = self.select_fig0.value
         ax.set_xlim(t_min + pad, t_max + pad)
         ax.set_ylim(-y_max, y_max)
-        ax.set_ylabel(self.fig0_show.key)
+        ax.set_ylabel(self.select_fig0.key)
 
 
 
@@ -347,8 +451,8 @@ class CustomAnim(Animation):
         self.mit.f = self.fg
         self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
 
-        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt, [self.fig1_show.key, 'Tind'])
-        Xs = abs(mit_curves[self.fig1_show.key]) if self.fig1_show.key[0] == 'I' else mit_curves[self.fig1_show.key]
+        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt, [self.select_fig1.key, 'Tind'])
+        Xs = abs(mit_curves[self.select_fig1.key]) if self.select_fig1.key[0] == 'I' else mit_curves[self.select_fig1.key]
         Tinds = mit_curves['Tind']
         nrs = mit_curves['nr']
 
@@ -365,11 +469,11 @@ class CustomAnim(Animation):
         self.plt_lines['Ix'].set_xdata(nrs)
         self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind,))
         self.plt_lines['Tind_marker'].set_xdata((self.mit.nr,))
-        self.plt_lines['Ix_marker'].set_ydata(((abs(self.mit[self.fig1_show.key]) if self.fig1_show.key[0] == 'I' else self.mit[self.fig1_show.key]),))
+        self.plt_lines['Ix_marker'].set_ydata(((abs(self.mit[self.select_fig1.key]) if self.select_fig1.key[0] == 'I' else self.mit[self.select_fig1.key]),))
         self.plt_lines['Ix_marker'].set_xdata((self.mit.nr,))
 
-        self.plt_lines['Ix'].set_color(cl[self.fig1_show.key])
-        self.plt_lines['Ix_marker'].set_color(cl[self.fig1_show.key])
+        self.plt_lines['Ix'].set_color(cl[self.select_fig1.key])
+        self.plt_lines['Ix_marker'].set_color(cl[self.select_fig1.key])
         ax.set_xlim(min(nrs), max(nrs))
 
         # ypad = 1.1
@@ -389,7 +493,7 @@ class CustomAnim(Animation):
         #     ymax = -sat*ymin
 
         ax.set_ylim(ymin, ymax)
-        ax.set_ylabel('Tind' + ((', ' + self.fig1_show.key) if self.fig1_show.key != 'nan' else ''))
+        ax.set_ylabel('Tind' + ((', ' + self.select_fig1.key) if self.select_fig1.key != 'nan' else ''))
 
 
 
@@ -409,9 +513,9 @@ class CustomAnim(Animation):
         # self.prims.print_tree()
 
     def create(self):
-        synchronous_generator_draw(self.canvas, self.prims, self.select_stator_turns.value[0], self.select_rotor_turns.value[0])
-        # print('\n')
-        # self.prims.print_tree()
+        mit_draw(self.canvas, self.prims, self.select_stator_turns.value[0], self.select_rotor_turns.value[0])
+        self.prims.draw(consolidate_transforms_to_original=True)
+
 
 
     def update_info(self):
@@ -519,13 +623,6 @@ class CustomAnim(Animation):
             self.update_info()
 
 
-        def change_display_mu(var):
-            match var:
-                case 'speed': next(self.select_speed_unit)
-                case 'power': next(self.select_power_unit)
-                case _: raise ValueError('assert')
-            self.update_info()
-
         def change_slots(parts: Literal['rotor', 'stator']):
             if isinstance(parts, str):
                 parts = [parts]
@@ -536,18 +633,37 @@ class CustomAnim(Animation):
             self.create()
 
 
-        def choose_fig0_show():
-            next(self.fig0_show)
-            self.invalidate_fig0_data()
+        def reset_colors():
+            next(self.select_dynamic_color)
+            print(f'{self.select_dynamic_color.value}, {self.select_dynamic_color.key}')
+            if not self.select_dynamic_color.value:
+                for ph in 'abc':
+                    for direction in ('in', 'out'):
+                        self.prims['stator']['coil'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
+                        self.prims['stator']['coil'][direction][ph].fill = cl[ph]
+                    for direction in ('in', 'out'):
+                        self.prims['stator']['current'][direction][ph].fill = scale_rgb(cl[ph], contrast_color_scale)
+                        self.prims['stator']['current'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
 
-        def choose_fig1_show():
-            next(self.fig1_show)
+                    for ph in 'xyz':
+                        for direction in ('in', 'out'):
+                            self.prims['rotor']['coil'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
+                            self.prims['rotor']['coil'][direction][ph].fill = cl[ph]
+                        for direction in ('in', 'out'):
+                            self.prims['rotor']['current'][direction][ph].fill = scale_rgb(cl[ph], contrast_color_scale)
+                            self.prims['rotor']['current'][direction][ph].stroke = scale_rgb(cl[ph], contrast_color_scale)
 
-        def select_phases(part):
-            match part:
-                case 'stator': next(self.stator_field_show)
-                case 'rotor': next(self.rotor_field_show)
-                case _: raise ValueError('assert')
+
+                print('estive aqui')
+
+
+
+
+        def test():
+            self.select_stator_field.key = 's'
+            self.select_rotor_field.key = 'r'
+            self.prims.print_tree(print_leafs=False)
+
 
         dw_inc = 0.89   #0.83333333333333333333333333
         f_max = 70
@@ -564,8 +680,8 @@ class CustomAnim(Animation):
         self.canvas.window.bind(']', lambda event: inc_value('time_factor', self.time_factor*.2, 32.45273575943723503208293147346, 1492.992))
         self.canvas.window.bind('[', lambda event: inc_value('time_factor', -self.time_factor*.16666666666666666666666666666667, 32.45273575943723503208293147346, 1492.992))
 
-        self.canvas.window.bind('v', lambda event: change_display_mu('speed') )
-        self.canvas.window.bind('p', lambda event: change_display_mu('power'))
+        self.canvas.window.bind('v', lambda event: next(self.select_speed_unit) )
+        self.canvas.window.bind('p', lambda event: next(self.select_power_unit))
         self.canvas.window.bind('*',       lambda event: inc_value('delay', 1, 0, 30))
         self.canvas.window.bind('/',       lambda event: inc_value('delay', -1, 0, 30))
         self.canvas.window.bind('<space>', lambda event: toggle_run())
@@ -578,11 +694,19 @@ class CustomAnim(Animation):
         self.canvas.window.bind('n', lambda event: change_slots('rotor'))
         # self.canvas.window.bind('d', lambda event: self.destroy())
         # self.canvas.window.bind('c', lambda event: self.create())
-        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: choose_fig0_show())
-        self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: choose_fig1_show())
+        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.select_fig0), self.invalidate_fig0_data()})
+        self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: next(self.select_fig1))
+        self.canvas.bind('<Button-1>', lambda event: {next(self.select_part),self.prims.print_tree(print_leafs=False)})
+        self.canvas.bind('<Button-3>', lambda event: test())
 
-        self.canvas.window.bind('s', lambda event: select_phases('stator'))
-        self.canvas.window.bind('r', lambda event: select_phases('rotor'))
+        self.canvas.window.bind('T', lambda event: {print(f'\n\n{'-' * 135}'), self.prims.print_tree()})
+        self.canvas.window.bind('t', lambda event: {print(f'\n\n{'-'*135}'), self.prims.print_tree(False)})
+        self.canvas.window.bind('d', lambda event: reset_colors())
+        self.canvas.window.bind('s', lambda event: next(self.select_stator_field))
+        self.canvas.window.bind('r', lambda event: next(self.select_rotor_field))
+        self.canvas.window.bind('\\', lambda event: next(self.select_mount))
+        self.canvas.window.bind('k', lambda event: next(self.select_ref))
+
 
         self.widgets['sim_inertia'].configure(variable=self.en_sim_inertia)
         self.widgets['stator_field_lines'].configure(variable=self.en_stator_field_lines)

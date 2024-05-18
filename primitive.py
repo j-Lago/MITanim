@@ -11,13 +11,16 @@ from copy import copy, deepcopy
 
 
 
-def recursive_parent_visible(obj, visiblitity):
+def recursive_parent_visible(obj, parent_visibility, node_visibility=None):
     if isinstance(obj, PrimitivesGroup):
-        obj._parent_visibility = visiblitity
+        obj._parent_visibility = parent_visibility
+        if node_visibility is not None:
+            obj._visibility = node_visibility
+
         for child in obj.nodes:
-            recursive_parent_visible(child, visiblitity)
+            recursive_parent_visible(child, parent_visibility and obj._visibility, node_visibility)
     else:
-        obj.visible = visiblitity
+        obj.visible = parent_visibility
 
 class Primitive:
     def __init__(self, canvas: NormCanvas,
@@ -25,6 +28,7 @@ class Primitive:
                  coords: Coords,
                  transforms: tuple[FunctionType, tuple] | list[tuple[FunctionType, tuple]] | tuple[tuple[FunctionType, tuple]] | Any | None = None,
                  name='unnamed',
+                 anchor=(0.0, 0.0),
                  **kwargs):
         """
         """
@@ -41,22 +45,28 @@ class Primitive:
                     transform, args  = transform_args
                     if isinstance(args, float | int):
                         coords = transform(coords, args)
+                        anchor = transform(anchor, args)
                     elif isinstance(args, tuple):
                         if isinstance(args[0], float | int):
                             coords = transform(coords, args)
+                            anchor = transform(anchor, args)
                         else:
                             coords = transform(coords, *args)
+                            anchor = transform(anchor, *args)
                     elif isinstance(args, dict):
                         coords = transform(coords, **args)
+                        anchor = transform(anchor, **args)
 
                 else:
                     coords = transform_args[0](coords)
+                    anchor = transform_args[0](anchor)
 
 
         self.coords = coords
+        self.anchor = anchor
         self.original_coords = coords
+        self.original_anchor = anchor
         self.shape = shape
-
 
         self._create(**kwargs)
 
@@ -128,6 +138,7 @@ class Primitive:
     def visible(self, visible):
         self._canvas.itemconfig(self._handle, state='normal' if visible else 'hidden')
 
+
     @property
     def stipple(self) -> str:
         return self._canvas.itemcget(self._handle, 'stipple')
@@ -138,24 +149,37 @@ class Primitive:
 
     def reset_transformations(self):
         self.coords = self.original_coords
+        self.anchor = self.original_anchor
 
     def reverse(self, from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
+        anchor = self.original_anchor if from_original else self.anchor
+
+        self.anchor = transformations.reverse(anchor)
         self.coords = transformations.reverse(coords)
         return self
 
     def rotate(self, angle: Numeric, center: Point = (0, 0), from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
+        anchor = self.original_anchor if from_original else self.anchor
+
+        self.anchor = transformations.rotate(anchor, angle, center)
         self.coords = transformations.rotate(coords, angle, center)
         return self
 
     def translate(self, offset: Point, from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
+        anchor = self.original_anchor if from_original else self.anchor
+
+        self.anchor = transformations.translate(anchor, offset)
         self.coords = transformations.translate(coords, offset)
         return self
 
     def scale(self, factor: Numeric | Point, center: Point = (0, 0), from_original: bool = False):
         coords = self.original_coords if from_original else self.coords
+        anchor = self.original_anchor if from_original else self.anchor
+
+        self.anchor = transformations.scale(anchor, factor, center)
         self.coords = transformations.scale(coords, factor, center)
         return self
 
@@ -197,9 +221,11 @@ class Primitive:
 
         if consolidate_transforms_to_original:
             self.original_coords = self.coords
+            self.original_anchor = self.anchor
         else:
             if reset_transforms_to_original_after_draw:
                 self.coords = self.original_coords
+                self.anchor = self.original_anchor
 
 
 
@@ -345,7 +371,7 @@ class PrimitivesGroup:
     def visible(self, visiblitity):
         self._visibility = visiblitity
         for child in self.nodes:
-            recursive_parent_visible(child, visiblitity)
+            recursive_parent_visible(child, parent_visibility=self._visibility)
 
     @property
     def parent_visible(self):
@@ -392,7 +418,7 @@ class PrimitivesGroup:
         for child in self.nodes:
             child.draw(*args, **kwargs)
 
-    def print_tree(self, level=0):
+    def print_tree(self, print_leafs=True, level=0):
         class style:
             MAGENTA = '\033[95m'
             BLUE = '\033[94m'
@@ -414,13 +440,13 @@ class PrimitivesGroup:
             CHECK = style.GREEN + '\u2714'
 
         node_sty = style.NODE if self.visible and self.parent_visible else style.iNODE
-        print(node_sty + f'{'   ' * level}↳ [{level}] {self.name} ({symbol.CHECK if self.parent_visible else symbol.CROSS}{symbol.CHECK if self.visible else symbol.CROSS}' + node_sty + f'):'  + f' at {hex(id(self))}' + style.RESET)
+        print(f'{'.  ' * level}' + node_sty + f'↳ {self.name}[{len(self.nodes)}] ({symbol.CHECK if self.parent_visible else symbol.CROSS}{symbol.CHECK if self.visible else symbol.CROSS}' + node_sty + f'):'  + f' at {hex(id(self))}' + style.RESET)
         for prim in self.nodes:
             if isinstance(prim, PrimitivesGroup):
-                prim.print_tree(level=level+1)
-            else:
+                prim.print_tree(print_leafs=print_leafs, level=level+1)
+            elif print_leafs:
                 leaf_sty = style.LEAF if prim.visible else style.iLEAF
-                print(node_sty + f'{'   ' * (level + 1)}↳  ' + leaf_sty + f'{prim.name} ({symbol.CHECK if prim.visible else symbol.CROSS}' + leaf_sty + f'): {prim.shape}  ⇣{prim._handle}' + style.RESET)
+                print(f'{'.  ' * (level + 1)}' + node_sty + '↳  f' + leaf_sty + f'{prim.name} ({symbol.CHECK if prim.visible else symbol.CROSS}' + leaf_sty + f'): {prim.shape}  ⇣{prim._handle}' + style.RESET)
 
 
 
