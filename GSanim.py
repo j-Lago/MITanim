@@ -5,8 +5,8 @@ import numpy as np
 from tkinter import messagebox
 from math import sin, cos, pi, atan2, sqrt, fabs
 from NormCanvas import NormCanvas, BoolVar
-from primitive import Primitive, PrimitivesGroup
-from transformations import translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip, CircularDict, hex_bezier, scale_rgb
+from primitive import Primitive, PrimitivesGroup, collision_circle_point
+from transformations import norm_coords, denorm_coords, translate, rotate, scale, reverse, rgb_to_hex, hex_to_rgb, scale_hsl, set_hsl, clip, CircularDict, hex_bezier, scale_rgb, denorm_coords
 import time
 from assets import assets, cl, binds_message, contrast_color_scale
 from animation import Animation
@@ -86,7 +86,7 @@ class CustomAnim(Animation):
 
         self.select_ref = CircularDict({'stator': 0, 'rotor': 1, 'field': 2})
         self.select_mount = CircularDict({'normal': True, 'hidden': False})
-        self.select_part = CircularDict({'all': 0, 'stator': 1, 'rotor': 2})
+        # self.select_part = CircularDict({'all': 0, 'stator': 1, 'rotor': 2})
         self.select_stator_field = CircularDict({'abc': 0, 'abcs': 1, 'a': 2, 'b': 3, 'c': 4, 's': 5})
         self.select_stator_field.key = 's'
 
@@ -209,11 +209,12 @@ class CustomAnim(Animation):
             self.mit.f = self.fg
             self.mit.solve()
 
-            th_er = self.thg - self.thr + self.ths - pi
-            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg - self.ths - i * 2 * pi / 3) for i in range(3))
-            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg - self.ths+ phase(self.mit.Im) - i * 2 * pi / 3) for i in range(3))
-            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg - self.ths+ phase(self.mit.I1) - i * 2 * pi / 3) for i in range(3))
-            Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * 2 * pi / 3) for i in range(3))
+            th_er = self.thg - self.thr - pi
+            alpha = 2 * pi / 3
+            V1_abc = tuple(abs(self.mit.V1) * sin(self.thg  - i * alpha) for i in range(3))
+            Im_abc = tuple(abs(self.mit.Im) * sin(self.thg + phase(self.mit.Im) - i * alpha) for i in range(3))
+            I1_abc = tuple(abs(self.mit.I1) * sin(self.thg + phase(self.mit.I1) - i * alpha) for i in range(3))
+            Ir_xyz = tuple(abs(self.mit.I2) * self.mit.Ns_Nr * sin(th_er + phase(self.mit.I2) - i * alpha) for i in range(3))
 
             mit_t = {'V1_abc': V1_abc, 'Im_abc': Im_abc, 'Ir_xyz': Ir_xyz, 'I1_abc': I1_abc}
 
@@ -226,9 +227,9 @@ class CustomAnim(Animation):
             self.prims['rotor'].rotate(self.thr)
             self.prims['stator'].rotate(self.ths)
 
-            self.prims['stator']['core']['mount'].visible = self.select_mount.value
-            self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
-            self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
+            self.prims['stator']['core']['mount'].visible = self.select_mount.value and self.prims['stator']['core']['mount'].parent_visible
+            # self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
+            # self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
 
             if self.select_dynamic_color.value:
                 self.prims['stator']['coil_front'].visible = False
@@ -695,9 +696,16 @@ class CustomAnim(Animation):
 
 
         def test():
-            self.select_stator_field.key = 's'
-            self.select_rotor_field.key = 'r'
-            self.prims.print_tree(print_leafs=False)
+
+            x, y = norm_coords(canvas=self.canvas, coords=(self.canvas.winfo_pointerx() - self.canvas.winfo_rootx(),
+                                                           self.canvas.winfo_pointery() - self.canvas.winfo_rooty()))
+
+            if collision_circle_point(self.prims['rotor']['core']['outer'][0], (x, y)):
+                self.prims['rotor'].toggle_visible()
+            elif collision_circle_point(self.prims['stator']['core']['outer'][0], (x, y)):
+                self.prims['stator'].toggle_visible()
+
+
 
 
         dw_inc = 0.89   #0.83333333333333333333333333
@@ -733,8 +741,8 @@ class CustomAnim(Animation):
         # self.canvas.window.bind('c', lambda event: self.create())
         self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.select_fig0), self.invalidate_fig0_data()})
         self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: next(self.select_fig1))
-        self.canvas.bind('<Button-1>', lambda event: {next(self.select_part),self.prims.print_tree(print_leafs=False)})
-        self.canvas.bind('<Button-3>', lambda event: test())
+        # self.canvas.bind('<Button-3>', lambda event: {next(self.select_part),self.prims.print_tree(print_leafs=False)})
+        self.canvas.bind('<Button-1>', lambda event: test())
 
         self.canvas.window.bind('T', lambda event: {print(f'\n\n{'-' * 135}'), self.prims.print_tree()})
         self.canvas.window.bind('t', lambda event: {print(f'\n\n{'-'*135}'), self.prims.print_tree(False)})

@@ -18,6 +18,7 @@ def mit_draw(canvas, prims, s_coils_per_phase, r_coils_per_phase):
 
     create_coil_front(canvas, prims, s_coils_per_phase, r_coils_per_phase)
     create_current(canvas, prims, s_coils_per_phase, r_coils_per_phase)
+    prims['center'] = Primitive(canvas, 'circle', (0.0, 0.0, 0.013), fill=cl['airgap'], stroke=cl['outline'], name='center')
 
 
 def create_rotor(canvas, prims, coils_per_phase, phases=3):
@@ -100,8 +101,6 @@ def create_fields(canvas: NormCanvas, prims: PrimitivesGroup):
         prims['rotor']['field']['lines'][ph] = create_flux_from_quarter(canvas, orientation=2 * pi / 3 * i, color=cl[ph])
         prims['rotor']['field']['lines'][ph].visible = False
 
-
-    prims['rotor']['field'].append(Primitive(canvas,'circle', (0.0, 0.0, 0.015), fill=cl['airgap'], stroke=cl['outline'], name='center'))
 
 
 def create_coil_front(canvas: NormCanvas, prims: PrimitivesGroup, coils_per_phase_s: int, coils_per_phase_r:int, phases:int=3):

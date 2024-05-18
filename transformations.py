@@ -62,6 +62,11 @@ def denorm_coords(canvas, coords) -> tuple:
     center = (canvas.winfo_width() / 2), (canvas.winfo_height() / 2)
     return input_type(v * (base, -base)[i_xy := k % 2] + center[i_xy] for k, v in enumerate(coords))
 
+def norm_coords(canvas, coords) -> tuple:
+    base = min(canvas.winfo_width(), canvas.winfo_height()) // 2
+    center = (canvas.winfo_width() / 2), (canvas.winfo_height() / 2)
+    return tuple((v - center[i_xy := k % 2]) / (base, -base)[i_xy]  for k, v in enumerate(coords))
+
 def coords_circle_to_oval(coords) -> Coords:
     input_type = type(coords)
 

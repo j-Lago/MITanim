@@ -377,6 +377,9 @@ class PrimitivesGroup:
     def parent_visible(self):
         return self._parent_visibility
 
+    def toggle_visible(self):
+        self.visible = not self.visible
+
 
     def stroke(self, stroke):
         for child in self.nodes:
@@ -447,6 +450,13 @@ class PrimitivesGroup:
             elif print_leafs:
                 leaf_sty = style.LEAF if prim.visible else style.iLEAF
                 print(f'{'.  ' * (level + 1)}' + node_sty + '↳  f' + leaf_sty + f'{prim.name} ({symbol.CHECK if prim.visible else symbol.CROSS}' + leaf_sty + f'): {prim.shape}  ⇣{prim._handle}' + style.RESET)
+
+
+def collision_circle_point(circle: Primitive, point: tuple[float, float]) -> bool:
+    c = complex(*circle.coords[0:2])
+    r = circle.coords[2]
+    p = complex(*point)
+    return abs(p-c) < r
 
 
 
