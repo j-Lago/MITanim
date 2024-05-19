@@ -2,8 +2,8 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('Courier new', 14),
-        'fps': ('Poor Richard', 14),
+        'default': ('Cascadia Mono semibold', 13),
+        'fps': ('Poor Richard', 18),
     }
 
 cl = {'bg': '#ffffff',

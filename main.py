@@ -1,89 +1,128 @@
 from GSanim import CustomAnim
-# from custom_animation import CustomAnim
-
-import tkinter as tk
-from tkinter import ttk
-from NormCanvas import NormCanvas
-from assets import cl, fonts
-import numpy as np
-from math import sin, cos, sqrt, pi, atan2, fabs
-
+from tkinter import *
+from assets import *
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from NormCanvas import NormCanvas
+from copy import copy
 
 
 def main():
-
     WIDTH, HEIGHT = 700, 700
 
-    window = tk.Tk()
-    window.title("Lab. Virtual de Máquinas Elétricas: Motor de Indução Trifásico")
-    window.configure(background=cl['bg'])
-    canvas = NormCanvas(window, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
 
-    fig0, _ = plt.subplots(1, 1, figsize=(6, 3))
-    fig1, _ = plt.subplots(1, 1, figsize=(6, 3))
+    root = Tk()
+    root.title("Practice with Grid")
+    # root.geometry()
 
-    frames = tk.Frame(window, bg=cl['bg'])
-    infos = tk.Frame(frames, bg=cl['bg'])
-    plots = tk.Frame(frames, bg=cl['bg'])
-    controls = tk.Frame(frames, bg=cl['bg'])
 
-    # teste = tk.Checkbutton(controls, text='Use Metric')
-    # teste.state()
+    default = {'font': fonts['default'], 'bg': cl['bg'], 'fg': cl['default_font']}
+    root.configure(bg=default['bg'])
+    fig0, _ = plt.subplots(1, 1, figsize=(6.5, 3.5))
+    fig1, _ = plt.subplots(1, 1, figsize=(6.5, 3.5))
 
-    widgets = {
-        'fps': tk.Label(window, text='fps:', font=fonts['fps'], fg='#bb5533', bg=cl['bg']),
-        'canvas_fig0': FigureCanvasTkAgg(fig0, master=plots),
-        'canvas_fig1': FigureCanvasTkAgg(fig1, master=plots),
+    widgets = {}
 
-        'w_stator': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'w_rotor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'w_grid': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'slip': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'time_factor': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'Pconv': tk.Label(infos, text='...', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
+    widgets['canvas_fig0'] = FigureCanvasTkAgg(fig0, master=root)
+    widgets['canvas_fig1'] = FigureCanvasTkAgg(fig1, master=root)
+    canvas = NormCanvas(root, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
 
-        'sim_inertia': tk.Checkbutton(controls, text='Newton 2nd', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'rotor_field_lines': tk.Checkbutton(controls, text='Rotor field lines', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
-        'rotor_field_vec': tk.Checkbutton(controls, text='Rotor field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
-        'stator_field_lines': tk.Checkbutton(controls, text='Stator field lines', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
-        'stator_field_vec': tk.Checkbutton(controls, text='Stator field vector', font=fonts['default'],  bg=cl['bg'], fg=cl['default_font']),
-        'stator_coil_front': tk.Checkbutton(controls, text='Stator coil front', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'rotor_coil_front': tk.Checkbutton(controls, text='Rotor coil front', font=fonts['default'], bg=cl['bg'], fg=cl['default_font']),
-        'figs': [fig0, fig1],
-    }
+    widgets['canvas_fig0'].get_tk_widget().grid(row=1, column=0 , columnspan=9)
+    widgets['canvas_fig1'].get_tk_widget().grid(row=2, column=0 , columnspan=9)
+    canvas                                .grid(row=0, column=10, columnspan=11, rowspan=5)
 
-    widgets['canvas_fig0'].get_tk_widget().pack(anchor='ne', side='top', expand=0)
-    widgets['canvas_fig1'].get_tk_widget().pack(anchor='ne', side='top', expand=0)
-    widgets['fps'].pack(anchor='w', fill='none', side='top')
-    widgets['w_stator'].pack(anchor='w', fill='none', side='top')
-    widgets['w_rotor'].pack(anchor='w', fill='none', side='top')
-    widgets['w_grid'].pack(anchor='w', fill='none', side='top')
-    widgets['slip'].pack(anchor='w', fill='none', side='top')
-    widgets['Pconv'].pack(anchor='w', fill='none', side='top')
-    widgets['time_factor'].pack(anchor='w', fill='none', side='top', expand=0)
 
-    widgets['sim_inertia'].pack(anchor='w', fill='none', side='bottom')
-    widgets['stator_coil_front'].pack(anchor='w', fill='none', side='bottom')
-    widgets['rotor_coil_front'].pack(anchor='w', fill='none', side='bottom')
-    widgets['rotor_field_lines'].pack(anchor='w', fill='none', side='bottom')
-    widgets['stator_field_lines'].pack(anchor='w', fill='none', side='bottom')
-    widgets['rotor_field_vec'].pack(anchor='w', fill='none', side='bottom')
-    widgets['stator_field_vec'].pack(anchor='w', fill='none', side='bottom')
+    row0 = 3
+    Label(root, text="stator", **default).grid(row=row0+0, column=1)
+    Label(root, text="rotor", **default).grid(row=row0+0, column=2)
+    Label(root, text="Field vector", **default).grid(row=row0+1, column=0, sticky=E)
+    Label(root, text="Field lines", **default).grid(row=row0+2, column=0, sticky=E)
+    Label(root, text="Coil front", **default).grid(row=row0+3, column=0, sticky=E)
 
-    plots.pack(side='top')
-    frames.pack(side='left')
-    controls.pack(side='left')
-    infos.pack(side='right')
+    default_check = {'bg': '#c4dad0', 'padx': 20}
+    widgets['rotor_field_lines']  = Checkbutton(root, **default_check)
+    widgets['rotor_field_vec']    = Checkbutton(root, **default_check)
+    widgets['rotor_coil_front']   = Checkbutton(root, **default_check)
+    widgets['stator_field_lines'] = Checkbutton(root, **default_check)
+    widgets['stator_field_vec']   = Checkbutton(root, **default_check)
+    widgets['stator_coil_front']  = Checkbutton(root, **default_check)
 
-    canvas.pack()
-    window.update()
+    widgets['rotor_field_lines']  .grid(row=row0 + 1, column=2, stick=W+E+N+S, padx=1, pady=1)
+    widgets['rotor_field_vec']    .grid(row=row0 + 2, column=2, stick=W+E+N+S, padx=1, pady=1)
+    widgets['rotor_coil_front']   .grid(row=row0 + 3, column=2, stick=W+E+N+S, padx=1, pady=1)
+    widgets['stator_field_lines'] .grid(row=row0 + 1, column=1, stick=W+E+N+S, padx=1, pady=1)
+    widgets['stator_field_vec']   .grid(row=row0 + 2, column=1, stick=W+E+N+S, padx=1, pady=1)
+    widgets['stator_coil_front']  .grid(row=row0 + 3, column=1, stick=W+E+N+S, padx=1, pady=1)
 
-    anim = CustomAnim(canvas, widgets)
-    anim.loop()
+    Label(root, text="stator [rad/s]", **default).grid(row=row0 + 2, column=10)
+    Label(root, text="rotor [rpm]"   , **default).grid(row=row0 + 2, column=12)
+    Label(root, text="grid [Hz]"     , **default).grid(row=row0 + 2, column=14)
+    Label(root, text="slip [pu]"     , **default).grid(row=row0 + 2, column=16)
+    Label(root, text="Pconv [kW]"    , **default).grid(row=row0 + 2, column=18)
+    Label(root, text="Tind [Nm]"     , **default).grid(row=row0 + 2, column=20)
 
-    window.mainloop()
+
+    root.columnconfigure(10, weight=3, minsize=70)
+    root.columnconfigure(12, weight=3, minsize=70)
+    root.columnconfigure(14, weight=3, minsize=70)
+    root.columnconfigure(16, weight=3, minsize=70)
+    root.columnconfigure(18, weight=3, minsize=70)
+    root.columnconfigure(20, weight=3, minsize=70)
+
+    root.columnconfigure(11, weight=1, minsize=5)
+    root.columnconfigure(13, weight=1, minsize=5)
+    root.columnconfigure(15, weight=1, minsize=5)
+    root.columnconfigure(17, weight=1, minsize=5)
+    root.columnconfigure(19, weight=1, minsize=5)
+    root.columnconfigure(21, weight=1, minsize=5)
+
+    default_instruments = copy(default)
+    default_instruments['bg'] = '#dd8834'
+    widgets['w_stator'] = Label(root, text="  0.0 rpm", **default_instruments)
+    widgets['w_rotor']  = Label(root, text="-3475 rpm", **default_instruments)
+    widgets['w_grid']   = Label(root, text="  -60 Hz" , **default_instruments)
+    widgets['slip']     = Label(root, text=" 0.04"    , **default_instruments)
+    widgets['Pconv']    = Label(root, text="-2341 W"  , **default_instruments)
+    widgets['Tind']     = Label(root, text="-12.5 Nm" , **default_instruments)
+
+    widgets['w_stator'].grid(row=row0 + 3, column=10, stick=W+E+N+S, ipadx=1, pady=1)
+    widgets['w_rotor'] .grid(row=row0 + 3, column=12, stick=W+E+N+S, ipadx=1, pady=1)
+    widgets['w_grid']  .grid(row=row0 + 3, column=14, stick=W+E+N+S, ipadx=1, pady=1)
+    widgets['slip']    .grid(row=row0 + 3, column=16, stick=W+E+N+S, ipadx=1, pady=1)
+    widgets['Pconv']   .grid(row=row0 + 3, column=18, stick=W+E+N+S, ipadx=1, pady=1)
+    widgets['Tind']    .grid(row=row0 + 3, column=20, stick=W+E+N+S, ipadx=1, pady=1)
+
+    # widgets['w_stator_um'] = Label(root, text="rpm", **default)
+    # widgets['w_rotor_um'] = Label(root, text="rpm", **default)
+    # widgets['w_grid_um'] = Label(root, text="Hz", **default)
+    # widgets['slip_um'] = Label(root, text="pu", **default)
+    # widgets['Pconv_um'] = Label(root, text="kW", **default)
+    # widgets['Tind_um'] = Label(root, text="Nm", **default)
+    #
+    # widgets['w_stator_um'].grid(row=row0 + 3, column=11, stick=W)
+    # widgets['w_rotor_um'].grid(row=row0 + 3, column=13, stick=W)
+    # widgets['w_grid_um'].grid(row=row0 + 3, column=15, stick=W)
+    # widgets['slip_um'].grid(row=row0 + 3, column=17, stick=W)
+    # widgets['Pconv_um'].grid(row=row0 + 3, column=19, stick=W)
+    # widgets['Tind_um'].grid(row=row0 + 3, column=21, stick=W)
+
+
+
+
+    widgets['sim_inertia'] = Checkbutton(root, text='Newton 2nd law          ', **default)
+    widgets['sim_inertia'].grid(row=row0 + 2, column=5)
+
+    widgets['fps'] = Label(root, text='fps:', font=fonts['fps'], fg='#bb5533', bg=cl['bg'])
+    widgets['fps'].grid(row=0, column=0, stick=W)
+
+
+
+    widgets['time_factor'] = Label(root, text='...', **default)
+    widgets['figs'] = (fig0, fig1)
+
+    CustomAnim(canvas, widgets).loop()
+    root.mainloop()
+
 
 if __name__ == '__main__':
     main()

@@ -96,7 +96,7 @@ class CustomAnim(Animation):
 
         self.select_fig0 = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
         self.select_speed_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_power_unit = CircularDict({'W': 1.0, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
+        self.select_power_unit = CircularDict({'kW': 0.001, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
         self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
         self.select_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
         self.select_coil_opacity = CircularDict({'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
@@ -516,7 +516,7 @@ class CustomAnim(Animation):
 
         um_name_p = self.select_power_unit.key
         um_factor_p = self.select_power_unit.value
-        frac_p = self.select_power_unit.value * 1000
+        frac_p = self.select_power_unit.value * 1000000
         frac_p = min(int((frac_p - int(frac_p)) * 10.0), 2)
         int_p = 4 - frac_p
 
@@ -525,12 +525,20 @@ class CustomAnim(Animation):
         for um in self.select_speed_unit:
             um_max_len = max(len(um), um_max_len)
 
-        self.widgets['w_stator']   .config(text=f"  vel. estator: {self.fs * um_factor  :>5.1f} {um_name}{' ' * (um_max_len - len(um_name))}")
-        self.widgets['w_grid']     .config(text=f"    vel. alim.: {self.fg * um_factor_g:>5.1f} {um_name_g}{' ' * (um_max_len - len(um_name_g))}")
-        self.widgets['w_rotor']    .config(text=f"    vel. rotor: {(1.0-self.s)*self.fg * um_factor  :>5.1f} {um_name}{' ' * (um_max_len - len(um_name))}")
-        self.widgets['slip']       .config(text=f"          slip: {self.mit.s  :>6.2f} pu{' ' * um_max_len}")
-        self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.1f} x")
-        self.widgets['Pconv']      .config(text=f"   conv. power: {self.mit.Pconv * um_factor_p:>{int_p}.{frac_p}f} {um_name_p}{' ' * (um_max_len - len(um_name_p))}")
+        # self.widgets['w_stator']   .config(text=f"  vel. estator: {self.fs * um_factor  :>5.1f} {um_name}{' ' * (um_max_len - len(um_name))}")
+        # self.widgets['w_grid']     .config(text=f"    vel. alim.: {self.fg * um_factor_g:>5.1f} {um_name_g}{' ' * (um_max_len - len(um_name_g))}")
+        # self.widgets['w_rotor']    .config(text=f"    vel. rotor: {(1.0-self.s)*self.fg * um_factor  :>5.1f} {um_name}{' ' * (um_max_len - len(um_name))}")
+        # self.widgets['slip']       .config(text=f"          slip: {self.mit.s  :>6.2f} pu{' ' * um_max_len}")
+        # self.widgets['time_factor'].config(text=f"time reduction: {self.time_factor:>5.1f} x")
+        # self.widgets['Pconv']      .config(text=f"   conv. power: {self.mit.Pconv * um_factor_p:>{int_p}.{frac_p}f} {um_name_p}{' ' * (um_max_len - len(um_name_p))}")
+
+        self.widgets['w_stator']   .config(text=f"{self.fs * um_factor  :>4.1f}")
+        self.widgets['w_grid']     .config(text=f"{self.fg * um_factor_g:>4.1f}")
+        self.widgets['w_rotor']    .config(text=f"{(1.0 - self.s) * self.fg * um_factor :>4.1f}")
+        self.widgets['slip']       .config(text=f"{self.mit.s  :>4.2f}")
+        self.widgets['Pconv']      .config(text=f"{self.mit.Pconv * um_factor_p:>4.2f}")
+        self.widgets['Tind']       .config(text=f"{self.mit.Tind:>4.2f}")
+        # self.widgets['time_factor'].config(text=f"{self.time_factor:>6.1f} x")
 
     def reset_time(self, reset_and_stop=False):
         if self.t is not None:
@@ -581,6 +589,9 @@ class CustomAnim(Animation):
 
         def toggle_run():
             self.run = not self.run
+
+        def toggle_sim():
+            self.en_sim_inertia = not self.en_sim_inertia
 
         def inc_value(var_name: Literal['fg', 'fs', 's', 'delay', 'time_factor', 'Tres'],
                       increment: int | float,
@@ -707,7 +718,7 @@ class CustomAnim(Animation):
         self.canvas.window.bind('*',       lambda event: inc_value('delay', 1, 0, 30))
         self.canvas.window.bind('/',       lambda event: inc_value('delay', -1, 0, 30))
         self.canvas.window.bind('<space>', lambda event: toggle_run())
-
+        self.canvas.window.bind('<Return>', lambda event: toggle_sim())
         self.canvas.window.bind('<F1>', lambda event: show_binds())
         self.canvas.window.bind('<Escape>', lambda event: self.reset_time(reset_and_stop=True))
         self.canvas.window.bind('<0>',     lambda event: self.reset_time())
