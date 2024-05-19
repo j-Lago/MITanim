@@ -40,7 +40,7 @@ def plot_thread(event_redraw: Event, figs):
 #         event_redraw.clear()
 
 class CustomAnim(Animation):
-    def __init__(self, canvas: NormCanvas, widgets: dict):
+    def __init__(self, canvas: NormCanvas, widgets: dict = None):
         super().__init__(canvas, frame_delay=0)
 
         self._fs_inc = None
@@ -169,27 +169,6 @@ class CustomAnim(Animation):
         ax.axhline(0, linestyle='--', color=cl['grid'], linewidth=1)
         ax.axvline(0, linestyle='--', color=cl['grid'], linewidth=1)
 
-        # wmax = nmax * pi / 30.0
-        # self.mit.V1 = 1.0 * self.mit.V1nom
-        # self.mit.f = self.fg
-        # mit_curves = self.mit.solve_range(-wmax * 0.05, wmax, self.ax_npt_fig1, ['I1', 'Tind'])
-        # y1s = abs(mit_curves['I1'])
-        # y0s = mit_curves['Tind']
-        # nrs = mit_curves['nr']
-        #
-        # self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
-        # self.mit.wr = (1.0 - self.s) * self.fg * 2 * pi * 2 / self.mit.p
-        # self.mit.f = self.fg
-        # self.mit.solve()
-
-        # self.plt_lines['ws_cursor'] = ax.axvline(self.mit.ns, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
-        # self.plt_lines['wr_cursor'] = ax.axvline(self.mit.nr, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
-        # self.plt_lines['Tind'] = (ax.plot(nrs, y0s, color=cl['Tind'], lw=2))[0]
-        # self.plt_lines['Ix'] = (ax.plot(nrs, y1s, color=cl['I1'], lw=2))[0]
-        # self.plt_lines['Tind_marker'] = (ax.plot(self.mit.nr, self.mit.Tind, color=cl['Tind'], marker='o', markersize=marker_size, lw=2))[0]
-        # self.plt_lines['Ix_marker'] = (ax.plot(self.mit.nr, self.mit.I1, color=cl['I1'], marker='o', markersize=marker_size, lw=2))[0]
-        # ax.set_xlim(min(nrs), max(nrs))
-
         self.plt_lines['ws_cursor'] = ax.axvline(0, linestyle='-.', color=cl['ws_cursor'], lw=cursor_lw)
         self.plt_lines['wr_cursor'] = ax.axvline(0, linestyle='-.', color=cl['wr_cursor'], lw=cursor_lw)
         self.plt_lines['Tind'] = (ax.plot(0, 0, color=cl['Tind'], lw=2))[0]
@@ -203,7 +182,6 @@ class CustomAnim(Animation):
 
     def refresh(self, _, dt, frame_count):
         self.update_fps_info(dt)
-
         redraw_plt = frame_count % self.plot_downsample_factor == 0
 
         dt /= self.time_factor     # time scaled dt for animation

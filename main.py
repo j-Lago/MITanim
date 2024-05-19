@@ -2,6 +2,7 @@ from GSanim import CustomAnim
 # from custom_animation import CustomAnim
 
 import tkinter as tk
+from tkinter import ttk
 from NormCanvas import NormCanvas
 from assets import cl, fonts
 import numpy as np
@@ -20,9 +21,8 @@ def main():
     window.configure(background=cl['bg'])
     canvas = NormCanvas(window, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
 
-    fig0, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
-    fig1, _ = plt.subplots(1, 1, figsize=(6, 3), dpi=90)
-
+    fig0, _ = plt.subplots(1, 1, figsize=(6, 3))
+    fig1, _ = plt.subplots(1, 1, figsize=(6, 3))
 
     frames = tk.Frame(window, bg=cl['bg'])
     infos = tk.Frame(frames, bg=cl['bg'])
