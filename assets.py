@@ -2,7 +2,7 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('JetBrains Mono Medium', 13),
+        'default': ('JetBrains Mono Medium', 12),
         'fps': ('JetBrains Mono Medium', 14),
     }
 

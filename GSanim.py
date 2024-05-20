@@ -45,7 +45,7 @@ class CustomAnim(Animation):
         super().__init__(canvas, frame_delay=0)
 
         self.th_sync = None
-        self._fs_inc = None
+        self._f_ref_inc = None
         self.plt_lines = None
         self.widgets = widgets
 
@@ -74,6 +74,8 @@ class CustomAnim(Animation):
         self.en_stator_coil_front = BoolVar(False)
         self.en_rotor_coil_front = BoolVar(False)
 
+        self.sel_ref = tk.StringVar(value='stator')
+
 
 
         # para média móvel da exibição do FPS
@@ -81,31 +83,31 @@ class CustomAnim(Animation):
         self.dc_filter_buffer = deque(maxlen=100)
         self.plot_downsample_factor = 3
 
-        self.select_dynamic_color = CircularDict({'3phase': False, 'amplitude': True})
-        self.select_dynamic_color.key = '3phase'
+        self.sel_dynamic_color = CircularDict({'3phase': False, 'amplitude': True})
+        self.sel_dynamic_color.key = '3phase'
 
-        self.select_ref = CircularDict({'stator': 0, 'rotor': 1, 'field': 2})
-        self.select_mount = CircularDict({'normal': True, 'hidden': False})
+        # self.sel_ref = CircularDict({'stator': 0, 'rotor': 1, 'field': 2})
+        self.sel_mount = CircularDict({'normal': True, 'hidden': False})
         # self.select_part = CircularDict({'all': 0, 'stator': 1, 'rotor': 2})
-        self.select_stator_field = CircularDict({'abc': 0, 'abcs': 1, 'a': 2, 'b': 3, 'c': 4, 's': 5})
-        self.select_stator_field.key = 's'
+        self.sel_stator_field = CircularDict({'abc': 0, 'abcs': 1, 'a': 2, 'b': 3, 'c': 4, 's': 5})
+        self.sel_stator_field.key = 's'
 
-        self.select_rotor_field = CircularDict({'xyz': 0, 'xyzr': 1, 'x': 2, 'y': 3, 'z': 4, 'r': 5})
-        self.select_rotor_field.key = 'r'
+        self.sel_rotor_field = CircularDict({'xyz': 0, 'xyzr': 1, 'x': 2, 'y': 3, 'z': 4, 'r': 5})
+        self.sel_rotor_field.key = 'r'
 
-        self.select_fig1 = CircularDict({'nan': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
-        self.select_fig1.key = 'Tres'
+        self.sel_fig1 = CircularDict({'nan': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
+        self.sel_fig1.key = 'Tres'
 
-        self.select_fig0 = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
-        self.select_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
-        self.select_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
-        self.select_coil_opacity = CircularDict({'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
-        # self.select_power_unit = CircularDict({'kW': 0.001, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
-        # self.select_speed_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_fs_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_fr_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_fg_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
-        self.select_Pconv_unit = CircularDict({'kW': 0.001, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
+        self.sel_fig0 = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
+        self.sel_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
+        self.sel_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
+        self.sel_coil_opacity = CircularDict({'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
+        # self.sel_power_unit = CircularDict({'kW': 0.001, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
+        # self.sel_speed_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
+        self.sel_fs_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
+        self.sel_fr_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
+        self.sel_fg_unit = CircularDict({'Hz': 1.0, 'rad/s': 2 * pi, 'rpm': 60})  # 'um': fator de conversão
+        self.sel_Pconv_unit = CircularDict({'kW': 0.001, 'hp': 0.00134102, 'cv': 0.00135962})  # 'um': fator de conversão
 
 
         self.mit = MITsim(R1=14.7000 * 0.0,
@@ -223,11 +225,11 @@ class CustomAnim(Animation):
         self.prims['rotor'].rotate(self.th_rot)
         self.prims['stator'].rotate(self.th_ref)
 
-        self.prims['stator']['core']['mount'].visible = self.select_mount.value and self.prims['stator']['core']['mount'].parent_visible
+        self.prims['stator']['core']['mount'].visible = self.sel_mount.value and self.prims['stator']['core']['mount'].parent_visible
         # self.prims['rotor'].visible = self.select_part.key in ('rotor', 'all')
         # self.prims['stator'].visible = self.select_part.key in ('stator', 'all')
 
-        if self.select_dynamic_color.value:
+        if self.sel_dynamic_color.value:
             self.prims['stator']['coil_front'].visible = False
             self.prims['rotor']['coil_front'].visible = False
             self.color_stator_coils(I1_abc)
@@ -244,18 +246,36 @@ class CustomAnim(Animation):
             for fig in self.widgets['figs']:
                 fig.canvas.flush_events()
 
+        self.process_inc()
+        self.process_inertia(dt)
+        th_ref_inc = 0.0
+        match self.sel_ref.get():
+            case 'free':
+                pass
+            case 'stator':
+                self._f_ref_inc -= self.f_ref
+                th_ref_inc = -self.th_ref
+            case 'rotor':
+                self._f_ref_inc -= self.f_rot
+                th_ref_inc = -self.th_rot
+            case 'field':
+                self._f_ref_inc -= self.f_sync
+                th_ref_inc = -self.th_sync
+            case _:
+                raise ValueError('assert')
+        self.process_inc()
+
+
         if self.run:
-            s = self.s
-            self.f_grid += self._fg_inc
-            self.f_rot = (1.0 - s) * self.f_grid + self.f_ref
-            self._fg_inc = 0.0
+            self.th_ref = (self.th_ref + dt * self.f_ref * 2 * pi) % (2 * pi) + th_ref_inc
+            self.th_rot = (self.th_rot + dt * self.f_rot * 2 * pi) % (2 * pi) + th_ref_inc
+            self.th_grid = (self.th_grid + dt * self.f_grid * 2 * pi) % (2 * pi)
+            self.th_sync = self.th_grid + self.th_ref
+            self.t += dt
 
-            self.f_ref += self._fs_inc
-            self.f_sync += self._fs_inc
-            self.f_rot += self._fs_inc
-            self._fs_inc = 0.0
+        self.update_info()
 
-
+    def process_inertia(self, dt):
         if self.en_sim_inertia:
             DT = (self.mit.Tind - self.mit.Tres)
             self.f_rot += DT * dt / self.inertia
@@ -265,43 +285,22 @@ class CustomAnim(Animation):
             self.f_rot += dfr
             self._s_inc = 0.0
 
-        match self.select_ref.key:
-            case 'stator':
-                pass
-            case 'rotor':
-                self.f_ref -= self.f_rot
-            case 'field':
-                self.th_ref -= self.th_grid
-                self.th_grid -= 0
-            case _:
-                raise ValueError('assert')
-
+    def process_inc(self):
         if self.run:
-            self.th_ref = (self.th_ref + dt * self.f_ref * 2 * pi) % (2 * pi)
+            s = self.s
+            self.f_grid += self._fg_inc
+            self.f_rot = (1.0 - s) * self.f_grid + self.f_ref
+            self._fg_inc = 0.0
 
-            self.th_rot = (self.th_rot + dt * self.f_rot * 2 * pi) % (2 * pi)
-            self.th_grid = (self.th_grid + dt * self.f_grid * 2 * pi) % (2 * pi)
-            self.th_sync = self.th_grid + self.th_ref
-
-            self.t += dt
-
-            # match self.select_ref.key:
-            #     case 'stator':
-            #         pass
-            #     case 'rotor':
-            #         self.ths -= self.thr
-            #         self.thr = 0.0
-            #     case 'field':
-            #         self.ths -= self.thg
-            #         self.thg -= 0
-            #     case _: raise ValueError('assert')
-
-        self.update_info()
+            self.f_ref += self._f_ref_inc
+            self.f_sync += self._f_ref_inc
+            self.f_rot += self._f_ref_inc
+            self._f_ref_inc = 0.0
 
     # ------------------------------- end of refresh -------------------------------------
 
     def color_stator_coils(self, I1_abc):
-        if self.select_dynamic_color.value:
+        if self.sel_dynamic_color.value:
             for i, ph in enumerate('abc'):
                 amp = clip(I1_abc[i] * 0.33, -1.0, 1.0)
                 tp = fabs(amp)
@@ -398,26 +397,26 @@ class CustomAnim(Animation):
 
 
         for ph in 'abcs':
-            self.prims['stator']['field']['vec'][ph].visible = self.en_stator_field_vec and (ph in self.select_stator_field.key)
+            self.prims['stator']['field']['vec'][ph].visible = self.en_stator_field_vec and (ph in self.sel_stator_field.key)
 
         for ph in 'xyzr':
-            self.prims['rotor']['field']['vec'][ph].visible = self.en_rotor_field_vec and (ph in self.select_rotor_field.key)
+            self.prims['rotor']['field']['vec'][ph].visible = self.en_rotor_field_vec and (ph in self.sel_rotor_field.key)
 
         for ph in 'abcs':
-            self.prims['stator']['field']['lines'][ph].visible = self.en_stator_field_lines and (ph in self.select_stator_field.key)
+            self.prims['stator']['field']['lines'][ph].visible = self.en_stator_field_lines and (ph in self.sel_stator_field.key)
 
 
         for ph in 'xyzr':
-            self.prims['rotor']['field']['lines'][ph].visible = self.en_rotor_field_lines and (ph in self.select_rotor_field.key)
+            self.prims['rotor']['field']['lines'][ph].visible = self.en_rotor_field_lines and (ph in self.sel_rotor_field.key)
 
 
 
     def update_fig0(self, mit_t):
         ax = self.widgets['figs'][0].axes[0]
-        Y_show = mit_t[self.select_fig0.key]
+        Y_show = mit_t[self.sel_fig0.key]
 
         self.plt_t.append(self.t)
-        for i, ph in enumerate(self.select_fig0.key[3:6]):
+        for i, ph in enumerate(self.sel_fig0.key[3:6]):
             self.plt_y[i].append(Y_show[i])    #amp * sin(self.thg + phi + alpha * i))
             self.plt_lines[('abc')[i]].set_ydata(self.plt_y[i])
             self.plt_lines[('abc')[i]].set_xdata(self.plt_t)
@@ -429,10 +428,10 @@ class CustomAnim(Animation):
         t_max = max(self.plt_t)
         t_min = min(self.plt_t)
         # t_min = t_max -.01
-        y_max = self.select_fig0.value
+        y_max = self.sel_fig0.value
         ax.set_xlim(t_min + pad, t_max + pad)
         ax.set_ylim(-y_max, y_max)
-        ax.set_ylabel(self.select_fig0.key)
+        ax.set_ylabel(self.sel_fig0.key)
 
 
 
@@ -468,8 +467,8 @@ class CustomAnim(Animation):
         self.mit.f = self.f_grid
         self.mit.V1 = self.mit.V1nom * self.mit.m_comp(compensate_Z1=self.mit.R1 != 0.0)
 
-        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt_fig1, [self.select_fig1.key, 'Tind'])
-        Xs = abs(mit_curves[self.select_fig1.key]) if self.select_fig1.key[0] == 'I' else mit_curves[self.select_fig1.key]
+        mit_curves = self.mit.solve_range(wmin, wmax, self.ax_npt_fig1, [self.sel_fig1.key, 'Tind'])
+        Xs = abs(mit_curves[self.sel_fig1.key]) if self.sel_fig1.key[0] == 'I' else mit_curves[self.sel_fig1.key]
         Tinds = mit_curves['Tind']
         nrs = mit_curves['nr']
 
@@ -486,11 +485,11 @@ class CustomAnim(Animation):
         self.plt_lines['Ix'].set_xdata(nrs)
         self.plt_lines['Tind_marker'].set_ydata((self.mit.Tind,))
         self.plt_lines['Tind_marker'].set_xdata((self.mit.nr,))
-        self.plt_lines['Ix_marker'].set_ydata(((abs(self.mit[self.select_fig1.key]) if self.select_fig1.key[0] == 'I' else self.mit[self.select_fig1.key]),))
+        self.plt_lines['Ix_marker'].set_ydata(((abs(self.mit[self.sel_fig1.key]) if self.sel_fig1.key[0] == 'I' else self.mit[self.sel_fig1.key]),))
         self.plt_lines['Ix_marker'].set_xdata((self.mit.nr,))
 
-        self.plt_lines['Ix'].set_color(cl[self.select_fig1.key])
-        self.plt_lines['Ix_marker'].set_color(cl[self.select_fig1.key])
+        self.plt_lines['Ix'].set_color(cl[self.sel_fig1.key])
+        self.plt_lines['Ix_marker'].set_color(cl[self.sel_fig1.key])
         ax.set_xlim(min(nrs), max(nrs))
 
         # ypad = 1.1
@@ -510,7 +509,7 @@ class CustomAnim(Animation):
         #     ymax = -sat*ymin
 
         ax.set_ylim(ymin, ymax)
-        ax.set_ylabel('Tind' + ((', ' + self.select_fig1.key) if self.select_fig1.key != 'nan' else ''))
+        ax.set_ylabel('Tind' + ((', ' + self.sel_fig1.key) if self.sel_fig1.key != 'nan' else ''))
 
 
 
@@ -527,25 +526,26 @@ class CustomAnim(Animation):
 
 
     def create(self):
-        mit_draw(self.canvas, self.prims, self.select_stator_turns.value[0], self.select_rotor_turns.value[0])
+        mit_draw(self.canvas, self.prims, self.sel_stator_turns.value[0], self.sel_rotor_turns.value[0])
         self.prims.draw(consolidate_transforms_to_original=True)
 
 
 
     def update_info(self):
 
-        self.widgets['w_stator_um'].config(text=f'[{self.select_fs_unit.key}]')
-        self.widgets['w_rotor_um'] .config(text=f'[{self.select_fr_unit.key}]')
-        self.widgets['w_grid_um']  .config(text=f'[{self.select_fg_unit.key}]')
-        self.widgets['Pconv_um']   .config(text=f'[{self.select_Pconv_unit.key}]')
+        self.widgets['w_stator_um'].config(text=f'[{self.sel_fs_unit.key}]')
+        self.widgets['w_rotor_um'] .config(text=f'[{self.sel_fr_unit.key}]')
+        self.widgets['w_grid_um']  .config(text=f'[{self.sel_fg_unit.key}]')
+        self.widgets['Pconv_um']   .config(text=f'[{self.sel_Pconv_unit.key}]')
 
         maxlen = len('stator [rad/s]')
-        self.widgets['w_stator']   .config(text=f'{self.f_ref * self.select_fs_unit.value        :4.1f}')
-        self.widgets['w_rotor']    .config(text=f'{self.f_rot * self.select_fr_unit.value        :4.1f}')
-        self.widgets['w_grid']     .config(text=f'{self.f_sync * self.select_fg_unit.value       :4.1f}')
-        self.widgets['Pconv']      .config(text=f'{self.mit.Pconv * self.select_Pconv_unit.value :4.2f}')
-        self.widgets['slip']       .config(text=f'{self.mit.s                                    :4.2f}')
-        self.widgets['Tind']       .config(text=f'{self.mit.Tind                                 :4.2f}')
+        self.widgets['w_stator'].config(text=f'{self.f_ref * self.sel_fs_unit.value        :4.1f}')
+        self.widgets['w_rotor'] .config(text=f'{self.f_rot * self.sel_fr_unit.value        :4.1f}')
+        self.widgets['w_grid']  .config(text=f'{self.f_sync * self.sel_fg_unit.value       :4.1f}')
+        self.widgets['Pconv']   .config(text=f'{self.mit.Pconv * self.sel_Pconv_unit.value :4.2f}')
+        self.widgets['slip']    .config(text=f'{self.mit.s                                 :4.2f}')
+        self.widgets['Tind']    .config(text=f'{self.mit.Tind                              :4.2f}')
+        self.widgets['f']       .config(text=f'{self.mit.f                                 :4.1f}')
         # self.widgets['time_factor'].config(text=f"{self.time_factor:>6.1f} x")
 
     def reset_time(self, reset_and_stop=False):
@@ -563,7 +563,7 @@ class CustomAnim(Animation):
         self.f_rot = 57.0
         self.f_ref = 0.0
         self.f_sync = 60.0
-        self._fs_inc = 0.0
+        self._f_ref_inc = 0.0
         self._fg_inc = 0.0
         self._s_inc = 0.0
         self.inertia = 0.008
@@ -601,7 +601,7 @@ class CustomAnim(Animation):
 
     @property
     def s(self):
-        if self.f_sync != 0.0:
+        if self.f_grid != 0.0:
             return (self.f_sync - self.f_rot) / self.f_grid
         else:
             return 0.0
@@ -620,7 +620,11 @@ class CustomAnim(Animation):
             self.run = not self.run
 
         def toggle_sim():
-            self.en_sim_inertia = not self.en_sim_inertia
+            if self.en_sim_inertia:
+                self.en_sim_inertia = False
+            else:
+                self.en_sim_inertia = True
+
 
         def inc_value(var_name: Literal['fg', 'fs', 's', 'delay', 'time_factor', 'Tres'],
                       increment: int | float,
@@ -630,7 +634,7 @@ class CustomAnim(Animation):
             match var_name:
                 case 'fs':
                     if self.run:
-                        self._fs_inc = clip(self.f_ref + increment, v_min, v_max) - self.f_ref
+                        self._f_ref_inc = clip(self.f_ref + increment, v_min, v_max) - self.f_ref
                 case 's':
                     if self.run:
                         if self.f_sync < 0:
@@ -661,14 +665,14 @@ class CustomAnim(Animation):
                 parts = [parts]
 
             self.destroy()
-            if 'rotor' in parts: next(self.select_rotor_turns)
-            if 'stator' in parts: next(self.select_stator_turns)
+            if 'rotor' in parts: next(self.sel_rotor_turns)
+            if 'stator' in parts: next(self.sel_stator_turns)
             self.create()
 
 
         def reset_colors():
-            next(self.select_dynamic_color)
-            if not self.select_dynamic_color.value:
+            next(self.sel_dynamic_color)
+            if not self.sel_dynamic_color.value:
                 self.widgets['stator_coil_front'].config(state=tk.NORMAL)
                 self.widgets['rotor_coil_front'].config(state=tk.NORMAL)
                 # del self.en_stator_coil_front
@@ -700,15 +704,15 @@ class CustomAnim(Animation):
 
 
         def change_coil_opacity():
-            next(self.select_coil_opacity)
+            next(self.sel_coil_opacity)
             for ph in ('xyz'):
                 for node in self.prims['rotor'].filter_matching_keys('coil_front', ph):
                     node.fill = cl[ph]
-                    node.stipple = self.select_coil_opacity.key
+                    node.stipple = self.sel_coil_opacity.key
             for ph in ('abc'):
                 for node in self.prims['stator'].filter_matching_keys('coil_front', ph):
                     node.fill = cl[ph]
-                    node.stipple = self.select_coil_opacity.key
+                    node.stipple = self.sel_coil_opacity.key
 
 
 
@@ -745,7 +749,7 @@ class CustomAnim(Animation):
         self.canvas.window.bind('*',       lambda event: inc_value('delay', 1, 0, 30))
         self.canvas.window.bind('/',       lambda event: inc_value('delay', -1, 0, 30))
         self.canvas.window.bind('<space>', lambda event: toggle_run())
-        self.canvas.window.bind('<Return>', lambda event: toggle_sim())
+        # self.canvas.window.bind('<Return>', lambda event: toggle_sim())
         self.canvas.window.bind('<F1>', lambda event: show_binds())
         self.canvas.window.bind('<Escape>', lambda event: self.reset_time(reset_and_stop=True))
         self.canvas.window.bind('<0>',     lambda event: self.reset_time())
@@ -756,18 +760,18 @@ class CustomAnim(Animation):
 
         # self.canvas.window.bind('d', lambda event: self.destroy())
         # self.canvas.window.bind('c', lambda event: self.create())
-        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.select_fig0), self.invalidate_fig0_data()})
-        self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: next(self.select_fig1))
+        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.sel_fig0), self.invalidate_fig0_data()})
+        self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: next(self.sel_fig1))
         # self.canvas.bind('<Button-3>', lambda event: {next(self.select_part),self.prims.print_tree(print_leafs=False)})
         self.canvas.bind('<Button-1>', lambda event: change_part_visibility())
 
         self.canvas.window.bind('T',  lambda event: {print(f'\n\n{'-' * 135}'), self.prims.print_tree()})
         self.canvas.window.bind('t',  lambda event: {print(f'\n\n{'-'*135}'), self.prims.print_tree(False)})
         self.canvas.window.bind('d',  lambda event: reset_colors())
-        self.canvas.window.bind('s',  lambda event: next(self.select_stator_field))
-        self.canvas.window.bind('r',  lambda event: next(self.select_rotor_field))
-        self.canvas.window.bind('\\', lambda event: next(self.select_mount))
-        self.canvas.window.bind('k',  lambda event: next(self.select_ref))
+        self.canvas.window.bind('s', lambda event: next(self.sel_stator_field))
+        self.canvas.window.bind('r', lambda event: next(self.sel_rotor_field))
+        self.canvas.window.bind('\\', lambda event: next(self.sel_mount))
+        # self.canvas.window.bind('k',  lambda event: next(self.select_ref))
 
 
         self.widgets['sim_inertia']       .configure(variable=self.en_sim_inertia)
@@ -778,9 +782,14 @@ class CustomAnim(Animation):
         self.widgets['stator_coil_front'] .configure(variable=self.en_stator_coil_front)
         self.widgets['rotor_coil_front']  .configure(variable=self.en_rotor_coil_front)
 
-        self.widgets['w_stator_um'].bind('<Button-1>', lambda event: next(self.select_fs_unit))
-        self.widgets['w_rotor_um'] .bind('<Button-1>', lambda event: next(self.select_fr_unit))
-        self.widgets['w_grid_um']  .bind('<Button-1>', lambda event: next(self.select_fg_unit))
-        self.widgets['Pconv_um']   .bind('<Button-1>', lambda event: next(self.select_Pconv_unit))
+        self.widgets['w_stator_um'].bind('<Button-1>', lambda event: next(self.sel_fs_unit))
+        self.widgets['w_rotor_um'] .bind('<Button-1>', lambda event: next(self.sel_fr_unit))
+        self.widgets['w_grid_um']  .bind('<Button-1>', lambda event: next(self.sel_fg_unit))
+        self.widgets['Pconv_um']   .bind('<Button-1>', lambda event: next(self.sel_Pconv_unit))
+
+        self.widgets['ref_free'].configure(variable=self.sel_ref, value='free')
+        self.widgets['ref_stator'].configure(variable=self.sel_ref, value='stator')
+        self.widgets['ref_rotor'] .configure(variable=self.sel_ref, value='rotor')
+        self.widgets['ref_field'] .configure(variable=self.sel_ref, value='field')
 
         # self.canvas.window.bind('<B1-Motion>', lambda event: drag_window())
