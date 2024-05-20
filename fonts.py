@@ -14,7 +14,7 @@ def main():
         listnumber = 1
         for item in fonts:
             label = "listlabel" + str(listnumber)
-            label = Label(frame, text=item, bg='#ffffff',font=(item, 16)).pack()
+            label = Label(frame, text=item+' 0123456789/+-', bg='#ffffff',font=(item, 16)).pack()
             listnumber += 1
 
     def onFrameConfigure(canvas):

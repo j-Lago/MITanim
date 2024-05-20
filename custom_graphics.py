@@ -23,7 +23,6 @@ def mit_draw(canvas, prims, s_coils_per_phase, r_coils_per_phase):
 
 def create_rotor(canvas, prims, coils_per_phase, phases=3):
 
-
     prims['rotor'] = []
     prims['rotor']['core'] = []
     prims['rotor']['core']['outer'] = Primitive(canvas, **assets[name := 'rotor_outer'], name=name)
@@ -83,18 +82,19 @@ def create_current(canvas, prims, coils_per_phase_s, coils_per_phase_r, phases =
 def create_fields(canvas: NormCanvas, prims: PrimitivesGroup):
     prims['stator']['field'] = []
     prims['stator']['field']['vec'] = []
-    for i, ph in enumerate(('abcs')):
+    for i, ph in enumerate('abcs'):
         prims['stator']['field']['vec'][ph] = GraphicVec2(0.4, 0.0, canvas, stroke=cl[ph], transforms=(rotate, 2 * pi / 3 * i), name='field_vec_' + ph)
 
     prims['rotor']['field'] = []
     prims['rotor']['field']['vec'] = []
-    for i, ph in enumerate(('xyzr')):
+    for i, ph in enumerate('xyzr'):
         prims['rotor']['field']['vec'][ph] = GraphicVec2(0.4, 0.0, canvas, stroke=cl[ph], transforms=(rotate, 2 * pi / 3 * i), name='field_vec_' + ph)
 
     prims['stator']['field']['lines'] = []
     for i, ph in enumerate('abcs'):
         prims['stator']['field']['lines'][ph] = create_flux_from_quarter(canvas, orientation=2 * pi / 3 * i, color=cl[ph])
         prims['stator']['field']['lines'][ph].visible = False
+    prims['stator']['field']['lines']['s'].rotate(pi)
 
     prims['rotor']['field']['lines'] = []
     for i, ph in enumerate('xyzr'):

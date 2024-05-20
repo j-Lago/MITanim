@@ -2,8 +2,8 @@
 contrast_color_scale = 0.7
 
 fonts = {
-        'default': ('Cascadia Mono semibold', 13),
-        'fps': ('Poor Richard', 18),
+        'default': ('JetBrains Mono Medium', 13),
+        'fps': ('JetBrains Mono Medium', 14),
     }
 
 cl = {'bg': '#ffffff',
@@ -27,8 +27,8 @@ cl = {'bg': '#ffffff',
       'I2': '#ae7bb5',
       'Tind': '#13ab45',
       'Tres': '#CB4335',
-      'wr_cursor': '#9B59B6',
-      'ws_cursor': '#99A3A4',
+      'ws_cursor': '#9B59B6',
+      'wr_cursor': '#777777',
       'grid': '#3d3d3d',
       'default_font': '#1C2833',
       }
