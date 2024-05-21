@@ -1,4 +1,4 @@
-from GSanim import CustomAnim
+from MITanim import CustomAnim
 from tkinter import *
 from PIL import Image, ImageTk
 from assets import *
@@ -26,6 +26,9 @@ def main():
     widgets = {}
     widgets['fps'] = Label(root, text='fps:', font=fonts['fps'], fg='#D5DBDB', bg=cl['bg'])
     widgets['fps'].grid(row=0, column=12, stick=N+E)
+
+    widgets['time_factor'] = Label(root, text='...', font=fonts['fps'], fg='#D5DBDB', bg=cl['bg'])
+    widgets['time_factor'].grid(row=0, column=10, stick=N + E)
 
 
     default = {'font': fonts['default'], 'bg': cl['bg'], 'fg': cl['default_font']}
@@ -160,7 +163,7 @@ def main():
 
 
 
-    widgets['time_factor'] = Label(root, text='...', **default)
+
     widgets['figs'] = (fig0, fig1)
 
     CustomAnim(canvas, widgets).loop()

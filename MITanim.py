@@ -546,7 +546,7 @@ class CustomAnim(Animation):
         self.widgets['slip']    .config(text=f'{self.mit.s                                 :4.2f}')
         self.widgets['Tind']    .config(text=f'{self.mit.Tind                              :4.2f}')
         self.widgets['f']       .config(text=f'{self.mit.f                                 :4.1f}')
-        # self.widgets['time_factor'].config(text=f"{self.time_factor:>6.1f} x")
+        self.widgets['time_factor'].config(text=f"{self.time_factor:>6.1f} x")
 
     def reset_time(self, reset_and_stop=False):
         if self.t is not None:
@@ -657,7 +657,7 @@ class CustomAnim(Animation):
                     self.invalidate_fig0_data(last)
 
 
-            self.update_info()
+            # self.update_info()
 
 
         def change_slots(parts: Literal['rotor', 'stator']):
