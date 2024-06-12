@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 from custom_graphics import mit_draw, circular_pattern, IndexFilter3ph, create_stator
 from threading import Thread, Event
+from functools import partial
 
 def plot_thread(event_redraw: Event, figs):
     while True:
@@ -98,7 +99,14 @@ class CustomAnim(Animation):
         self.sel_fig1 = CircularDict({'nan': 20, 'I2': 20, 'I1': 20, 'Tres': 20})  #  'atributo': ylim
         self.sel_fig1.key = 'Tres'
 
-        self.sel_fig0 = CircularDict({'V1_abc': 500, 'Ir_xyz': 500, 'I1_abc': 12, 'Im_abc': 1})  # 'atributo': ylim
+        self.sel_fig0 = CircularDict({'V1_abc': 500,
+                                      'Ir_xyz': 500,
+                                      'I1_abc': 12,
+                                      'Im_abc': 1,
+                                      })  # 'atributo': ylim
+
+
+
         self.sel_stator_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3), '8': (8, 3)})  # versão do estator com n espiras por fase
         self.sel_rotor_turns = CircularDict({'simp': (2, 3), '4': (4, 3), '6': (6, 3)})  # versão do estator com n espiras por fase
         self.sel_coil_opacity = CircularDict({'gray75': 1, 'gray50': 2, 'gray25': 3})  # value não utilizado
@@ -613,7 +621,7 @@ class CustomAnim(Animation):
         def show_binds():
             current_state = self.run
             self.run = False
-            messagebox.showinfo("binds", binds_message)
+            messagebox.showinfo('binds', binds_message,)
             self.run = current_state
 
         def toggle_run():
@@ -716,22 +724,42 @@ class CustomAnim(Animation):
 
 
 
-
-        def change_part_visibility():
-
+        def change_part_field(event):
             x, y = norm_coords(canvas=self.canvas, coords=(self.canvas.winfo_pointerx() - self.canvas.winfo_rootx(),
                                                            self.canvas.winfo_pointery() - self.canvas.winfo_rooty()))
+            if collision_circle_point(self.prims['rotor']['core']['outer'][0], (x, y)):
+                field_menu(event, self.sel_rotor_field)
+            elif collision_circle_point(self.prims['stator']['core']['outer'][0], (x, y)):
+                field_menu(event, self.sel_stator_field)
 
+        def change_part_visibility():
+            x, y = norm_coords(canvas=self.canvas, coords=(self.canvas.winfo_pointerx() - self.canvas.winfo_rootx(),
+                                                           self.canvas.winfo_pointery() - self.canvas.winfo_rooty()))
             if collision_circle_point(self.prims['rotor']['core']['outer'][0], (x, y)):
                 self.prims['rotor'].toggle_visible()
             elif collision_circle_point(self.prims['stator']['core']['outer'][0], (x, y)):
                 self.prims['stator'].toggle_visible()
 
+        def field_menu(event, selection):
+            self.run = False
+            self._previous_run = False
+            menu = tk.Menu(self.canvas.window, tearoff=0)
+            if selection.name is not None:
+                menu.add_command(label=selection.name, state='disabled')
+                menu.add_separator()
+            for it in selection:
+                menu.add_command(label=it, command=partial(selection.set_current_key, it))
+            # if isinstance(selection.value, PlotLimits):
+            #     menu.add_separator()
+            #     menu.add_command(label='y autoscale', command=partial(toggle_autoscale, selection, 'y'))
+            menu.tk_popup(event.x_root, event.y_root)
+            self.run = True
+
 
 
         dw_inc = 0.89   #0.83333333333333333333333333
         f_max = 70
-        self.canvas.window.bind('+', lambda event: inc_value('fs', 1, -f_max, f_max))
+        self.canvas.window.bind('=', lambda event: inc_value('fs', 1, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))
         self.canvas.window.bind('.', lambda event: inc_value('s', -0.01, -0.2, 2.2))
         self.canvas.window.bind(',', lambda event: inc_value('s', 0.01, -0.2, 2.2))
@@ -761,9 +789,12 @@ class CustomAnim(Animation):
         # self.canvas.window.bind('d', lambda event: self.destroy())
         # self.canvas.window.bind('c', lambda event: self.create())
         self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-1>', lambda event: {next(self.sel_fig0), self.invalidate_fig0_data()})
+        self.widgets['canvas_fig0'].get_tk_widget().bind('<Button-3>', lambda event: {self.invalidate_fig0_data(), field_menu(event, self.sel_fig0)})
         self.widgets['canvas_fig1'].get_tk_widget().bind('<Button-1>', lambda event: next(self.sel_fig1))
         # self.canvas.bind('<Button-3>', lambda event: {next(self.select_part),self.prims.print_tree(print_leafs=False)})
         self.canvas.bind('<Button-1>', lambda event: change_part_visibility())
+        self.canvas.bind('<Button-3>', change_part_field)
+
 
         self.canvas.window.bind('T',  lambda event: {print(f'\n\n{'-' * 135}'), self.prims.print_tree()})
         self.canvas.window.bind('t',  lambda event: {print(f'\n\n{'-'*135}'), self.prims.print_tree(False)})

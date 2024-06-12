@@ -1,5 +1,6 @@
 from MITanim import CustomAnim
 from tkinter import *
+from tkinter import messagebox
 from PIL import Image, ImageTk
 from assets import *
 import matplotlib.pyplot as plt
@@ -16,6 +17,7 @@ def main():
     root.title("Laboratório Virtual de Máquinas Elétricas: Motor de Indução Trifásico")
     root.geometry('+50+50')
     # root.overrideredirect(True)
+
 
     gepai = ImageTk.PhotoImage(Image.open('./gepai.png'))
     Label(root, image=gepai, fg=cl['bg'], bg=cl['bg']).grid(row=0, column=0, rowspan=1, columnspan=2, stick=N+W)

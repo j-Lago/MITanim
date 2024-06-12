@@ -143,12 +143,14 @@ def hex_to_rgb(hex: str) -> tuple[float, ...]:
     return tuple(int(hex[i:i+2], 16)/255 for i in range(1, len(hex)-1, 2))
 
 
+
+
 class CircularDict(dict):
     def __init__(self, *args):
-        dict()
         super().__init__(*args)
         keys = list(self.keys())
         self._current_key = keys[0]
+        self.name = None
 
     @property
     def key(self):
@@ -156,6 +158,9 @@ class CircularDict(dict):
 
     @key.setter
     def key(self, value):
+        self.set_current_key(value)
+
+    def set_current_key(self, value):
         if value not in list(self.keys()):
             raise ValueError(f"a 'key' fornecida não faz parte do dicionário. São chaves válidas {list(self.keys())}")
         self._current_key = value

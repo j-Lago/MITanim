@@ -68,23 +68,33 @@ assets = {
 }
 
 
-
 binds_message = r"""
-grid angular speed: <up><down>
-rotor speed: <left><right>
-stator speed: <+><->
 
-stator magnetic axis: <[>
-rotor magnetic axis: <]>
+stator speed: <=><->
+slip: <.><,>
+grid angular speed: <left><right>
+load: <up><down>
 
-show rotor: <r>
-show stator: <s>
-show rotor field: <>
-show stator field: <f>
-
-reset time and stop: <esc>
+toggle run/pause: <space>
+reset time and stop <enter>
 reset time: <0>
-run/stop: <space>
 
+time factor: <[><]>
 frame delay: </><*>
+
+change stator n_esp: <m>
+change rotor n_esp: <n>
+coil opacity: <o>
+
+print primitives tree (nodes+leafs): <T>
+print primitives tree (just nodes): <t>
+
+select visible stator fields: <s>
+select visible rotor fields: <r>
+color by current: <d>
+
+hide mount: <\>
+
+
+show binds: <F1>
 """
