@@ -755,14 +755,16 @@ class CustomAnim(Animation):
             menu.tk_popup(event.x_root, event.y_root)
             self.run = True
 
+        def rot_restart():
+            self.f_rot = 0
 
 
         dw_inc = 0.89   #0.83333333333333333333333333
         f_max = 70
         self.canvas.window.bind('=', lambda event: inc_value('fs', 1, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))
-        self.canvas.window.bind('.', lambda event: inc_value('s', -0.01, -0.2, 2.2))
-        self.canvas.window.bind(',', lambda event: inc_value('s', 0.01, -0.2, 2.2))
+        self.canvas.window.bind('.', lambda event: inc_value('s', 0.01, -0.2, 2.2))
+        self.canvas.window.bind(',', lambda event: inc_value('s', -0.01, -0.2, 2.2))
         self.canvas.window.bind('<Right>', lambda event: inc_value('fg', dw_inc, -f_max, f_max))
         self.canvas.window.bind('<Left>', lambda event: inc_value('fg', -dw_inc, -f_max, f_max))
 
@@ -780,7 +782,8 @@ class CustomAnim(Animation):
         # self.canvas.window.bind('<Return>', lambda event: toggle_sim())
         self.canvas.window.bind('<F1>', lambda event: show_binds())
         self.canvas.window.bind('<Escape>', lambda event: self.reset_time(reset_and_stop=True))
-        self.canvas.window.bind('<0>',     lambda event: self.reset_time())
+        # self.canvas.window.bind('<0>',     lambda event: self.reset_time())
+        self.canvas.window.bind('<0>',     lambda event: rot_restart())
 
         self.canvas.window.bind('m', lambda event: change_slots('stator'))
         self.canvas.window.bind('n', lambda event: change_slots('rotor'))
