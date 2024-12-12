@@ -759,7 +759,7 @@ class CustomAnim(Animation):
             self.f_rot = 0
 
 
-        dw_inc = 0.89   #0.83333333333333333333333333
+        dw_inc = 0.89
         f_max = 70
         self.canvas.window.bind('=', lambda event: inc_value('fs', 1, -f_max, f_max))
         self.canvas.window.bind('-', lambda event: inc_value('fs', -1, -f_max, f_max))
@@ -799,8 +799,8 @@ class CustomAnim(Animation):
         self.canvas.bind('<Button-3>', change_part_field)
 
 
-        self.canvas.window.bind('T',  lambda event: {print(f'\n\n{'-' * 135}'), self.prims.print_tree()})
-        self.canvas.window.bind('t',  lambda event: {print(f'\n\n{'-'*135}'), self.prims.print_tree(False)})
+        self.canvas.window.bind('T',  lambda event: {print(f'\n\n{"-" * 135}'), self.prims.print_tree()})
+        self.canvas.window.bind('t',  lambda event: {print(f'\n\n{"-"*135}'), self.prims.print_tree(False)})
         self.canvas.window.bind('d',  lambda event: reset_colors())
         self.canvas.window.bind('s', lambda event: next(self.sel_stator_field))
         self.canvas.window.bind('r', lambda event: next(self.sel_rotor_field))
