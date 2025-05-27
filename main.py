@@ -10,12 +10,12 @@ from copy import copy
 
 
 def main():
-    WIDTH, HEIGHT = 700, 700
+    WIDTH, HEIGHT = 600, 600
 
 
     root = Tk()
     root.title("Laboratório Virtual de Máquinas Elétricas: Motor de Indução Trifásico")
-    root.geometry('+50+50')
+    root.geometry('+0+0')
     # root.overrideredirect(True)
 
 
@@ -35,8 +35,8 @@ def main():
 
     default = {'font': fonts['default'], 'bg': cl['bg'], 'fg': cl['default_font']}
     root.configure(bg=default['bg'])
-    fig0, _ = plt.subplots(1, 1, figsize=(6.5, 3.5))
-    fig1, _ = plt.subplots(1, 1, figsize=(6.5, 3.5))
+    fig0, _ = plt.subplots(1, 1, figsize=(6.0, 3.2))
+    fig1, _ = plt.subplots(1, 1, figsize=(6.0, 3.2))
 
 
 
