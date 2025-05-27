@@ -10,10 +10,13 @@ from copy import copy
 
 
 def main():
-    WIDTH, HEIGHT = 600, 600
+    CANVAS_WIDTH, CANVAS_HEIGHT = 600, 600
 
 
     root = Tk()
+    h = root.winfo_screenheight()
+    stretch = h/960
+
     root.title("Laboratório Virtual de Máquinas Elétricas: Motor de Indução Trifásico")
     root.geometry('+0+0')
     # root.overrideredirect(True)
@@ -35,8 +38,8 @@ def main():
 
     default = {'font': fonts['default'], 'bg': cl['bg'], 'fg': cl['default_font']}
     root.configure(bg=default['bg'])
-    fig0, _ = plt.subplots(1, 1, figsize=(6.0, 3.2))
-    fig1, _ = plt.subplots(1, 1, figsize=(6.0, 3.2))
+    fig0, _ = plt.subplots(1, 1, figsize=(6.0*stretch, 3.0*stretch))
+    fig1, _ = plt.subplots(1, 1, figsize=(6.0*stretch, 3.0*stretch))
 
 
 
@@ -97,7 +100,7 @@ def main():
     default_instruments = copy(default)
     default_instruments['bg'] = '#c8fcd4'
     row0, col0 = 4, 6
-    canvas = NormCanvas(root, bg=cl['bg'], height=HEIGHT, width=WIDTH, highlightbackground=cl['bg'])
+    canvas = NormCanvas(root, bg=cl['bg'], height=int(CANVAS_HEIGHT*stretch), width=int(CANVAS_WIDTH*stretch), highlightbackground=cl['bg'])
     canvas.grid(row=0, column=col0, columnspan=7, rowspan=8)
     Label(root, text='stator', **default_instruments).grid(row=row0 + 1, column=col0+0, stick=W+E+N+S, padx=1, pady=1)
     Label(root, text='rotor',  **default_instruments).grid(row=row0 + 1, column=col0+1, stick=W+E+N+S, padx=1, pady=1)
