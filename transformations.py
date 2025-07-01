@@ -38,7 +38,7 @@ def reverse(coords: Coords) -> Coords:
     input_type = type(coords)
     original = copy(coords)
     L = len(original)//2
-    pairs = (zip(coords[::2], coords[1::2]))  # (x0, y0, x1, y1, ...) -> ((x0, y0), (x1, y1), ...)
+    # pairs = (zip(coords[::2], coords[1::2]))  # (x0, y0, x1, y1, ...) -> ((x0, y0), (x1, y1), ...)
     pairs = ( (original[-i*2], original[-i*2-1])  for i in range(L) )
     coords = (v for pt in pairs for v in pt)  # ((x0, y0), (x1, y1), ...) -> (x0, y0, x1, y1, ...)
     return input_type(coords)

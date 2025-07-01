@@ -643,6 +643,7 @@ class CustomAnim(Animation):
                 case 'fs':
                     if self.run:
                         self._f_ref_inc = clip(self.f_ref + increment, v_min, v_max) - self.f_ref
+
                 case 's':
                     if self.run:
                         if self.f_sync < 0:
@@ -651,6 +652,9 @@ class CustomAnim(Animation):
                 case 'fg':
                     if self.run:
                         self._fg_inc = clip(self.f_sync + increment, v_min, v_max) - self.f_sync
+                        f_new = self._fg_inc + self.f_sync
+                        s_new = (f_new - self.f_rot) / f_new
+                        self._s_inc = -clip(s_new, v_min, v_max) + self.s
                 case 'Tres':
                     if self.run:
                         self.mit.k0 = clip(self.mit.k0 + increment, v_min, v_max)
